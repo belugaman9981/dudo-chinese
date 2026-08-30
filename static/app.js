@@ -14,6 +14,7 @@
   const processingScreen = $("processing-screen");
   const resultScreen = $("result-screen");
   const searchScreen = $("search-screen");
+  const settingsScreen = $("settings-screen");
 
   const video = $("camera");
   const cameraCanvas = $("camera-canvas");
@@ -47,13 +48,47 @@
   const searchResults = $("search-results");
   const searchHint = $("search-hint");
 
+  // Settings
+  const settingShowPinyinToggle = $("setting-show-pinyin");
+  const settingShowDefsToggle = $("setting-show-defs");
+  const settingCameraFacingSelect = $("setting-camera-facing");
+
+  // ---------- Settings persistence ----------
+  const SETTINGS_KEY = "xinhua-photo-pinyin-settings";
+  const DEFAULT_SETTINGS = {
+    showPinyinDefault: true,
+    showDefsDefault: false,
+    cameraFacing: "environment",
+  };
+
+  function loadSettings() {
+    try {
+      const raw = localStorage.getItem(SETTINGS_KEY);
+      if (!raw) return { ...DEFAULT_SETTINGS };
+      return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+    } catch (e) {
+      console.warn("Failed to load settings, using defaults", e);
+      return { ...DEFAULT_SETTINGS };
+    }
+  }
+
+  function saveSettings() {
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    } catch (e) {
+      console.warn("Failed to save settings", e);
+    }
+  }
+
+  const settings = loadSettings();
+
   // ---------- State ----------
   let stream = null;
   let currentImage = null;
   let currentImageDataUrl = null;
   let currentItems = [];
-  let showPinyin = true;
-  let showDefs = false;
+  let showPinyin = settings.showPinyinDefault;
+  let showDefs = settings.showDefsDefault;
   let annotationCanvas = null;
   let selectedItem = null;
   let uiLang = "en";
@@ -88,7 +123,15 @@
       noDefFound: "No definition found.",
       noSearchMatch: "No matching words — try without tones, e.g. \"shouji\".",
       noResultsYet: "No results yet — take a photo or upload one first.",
-      settingsSoon: "Settings coming soon.",
+      settingsDefaultsHeading: "Defaults",
+      settingShowPinyin: "Show pinyin by default",
+      settingShowDefs: "Show definitions by default",
+      settingsCameraHeading: "Camera",
+      settingCameraFacing: "Default camera",
+      cameraBack: "Back", cameraFront: "Front",
+      settingsAboutHeading: "About",
+      settingVersion: "Version",
+      settingsCedictNote: "Dictionary data from CC-CEDICT, licensed under CC BY-SA 4.0.",
     },
     zh: {
       appTitle: "新华字典", langLabel: "语言",
@@ -116,7 +159,15 @@
       noDefFound: "未找到释义。",
       noSearchMatch: "没有找到匹配的词 — 试试不带声调，如 \"shouji\"。",
       noResultsYet: "还没有结果 — 请先拍照或上传图片。",
-      settingsSoon: "设置功能即将推出。",
+      settingsDefaultsHeading: "默认设置",
+      settingShowPinyin: "默认显示拼音",
+      settingShowDefs: "默认显示释义",
+      settingsCameraHeading: "相机",
+      settingCameraFacing: "默认摄像头",
+      cameraBack: "后置", cameraFront: "前置",
+      settingsAboutHeading: "关于",
+      settingVersion: "版本",
+      settingsCedictNote: "词典数据来自 CC-CEDICT，采用 CC BY-SA 4.0 协议授权。",
     },
     es: {
       appTitle: "Diccionario Xinhua", langLabel: "Idioma",
@@ -144,7 +195,15 @@
       noDefFound: "No se encontró definición.",
       noSearchMatch: "No se encontraron palabras — prueba sin tonos, p. ej. \"shouji\".",
       noResultsYet: "Aún no hay resultados — toma o sube una foto primero.",
-      settingsSoon: "Los ajustes estarán disponibles pronto.",
+      settingsDefaultsHeading: "Valores predeterminados",
+      settingShowPinyin: "Mostrar pinyin por defecto",
+      settingShowDefs: "Mostrar definiciones por defecto",
+      settingsCameraHeading: "Cámara",
+      settingCameraFacing: "Cámara predeterminada",
+      cameraBack: "Trasera", cameraFront: "Frontal",
+      settingsAboutHeading: "Acerca de",
+      settingVersion: "Versión",
+      settingsCedictNote: "Datos del diccionario de CC-CEDICT, con licencia CC BY-SA 4.0.",
     },
   };
 
@@ -178,8 +237,8 @@
 
   // ---------- Screen switching ----------
   function showScreen(screen) {
-    [captureScreen, processingScreen, resultScreen, searchScreen].forEach((s) =>
-      s.classList.remove("active")
+    [captureScreen, processingScreen, resultScreen, searchScreen, settingsScreen].forEach(
+      (s) => s.classList.remove("active")
     );
     screen.classList.add("active");
 
@@ -187,6 +246,7 @@
     if (screen === captureScreen) setActiveTab("camera");
     else if (screen === resultScreen) setActiveTab("results");
     else if (screen === searchScreen) setActiveTab("search");
+    else if (screen === settingsScreen) setActiveTab("settings");
   }
 
   function setActiveTab(tabName) {
@@ -253,7 +313,7 @@
     try {
       const constraints = {
         video: {
-          facingMode: { ideal: "environment" },
+          facingMode: { ideal: settings.cameraFacing },
           width: { ideal: 1920 },
           height: { ideal: 1080 },
         },
@@ -710,10 +770,53 @@
           runPinyinSearch(pinyinSearchInput.value);
         }
       } else if (tab === "settings") {
-        toast(t("settingsSoon"));
+        showScreen(settingsScreen);
       }
     });
   });
+
+  // ---------- Settings screen wiring ----------
+  function setToggleState(btn, on) {
+    btn.classList.toggle("on", on);
+    btn.setAttribute("aria-checked", String(on));
+  }
+
+  function initSettingsUI() {
+    setToggleState(settingShowPinyinToggle, settings.showPinyinDefault);
+    setToggleState(settingShowDefsToggle, settings.showDefsDefault);
+    settingCameraFacingSelect.value = settings.cameraFacing;
+  }
+
+  settingShowPinyinToggle.addEventListener("click", () => {
+    settings.showPinyinDefault = !settings.showPinyinDefault;
+    setToggleState(settingShowPinyinToggle, settings.showPinyinDefault);
+    saveSettings();
+    // Also apply immediately to the screen currently being viewed.
+    showPinyin = settings.showPinyinDefault;
+    togglePinyinBtn.textContent = showPinyin ? t("hidePinyinBtn") : t("showPinyinBtn");
+    if (currentImage) drawAnnotation();
+  });
+
+  settingShowDefsToggle.addEventListener("click", () => {
+    settings.showDefsDefault = !settings.showDefsDefault;
+    setToggleState(settingShowDefsToggle, settings.showDefsDefault);
+    saveSettings();
+    showDefs = settings.showDefsDefault;
+    toggleDefsBtn.textContent = showDefs ? t("hideDefsBtn") : t("showDefsBtn");
+    if (currentItems.length) buildWordList();
+  });
+
+  settingCameraFacingSelect.addEventListener("change", () => {
+    settings.cameraFacing = settingCameraFacingSelect.value;
+    saveSettings();
+    // Restart the camera with the new facing mode if it's currently active.
+    if (stream) {
+      stopCamera();
+      startCamera();
+    }
+  });
+
+  initSettingsUI();
 
   langSelect.addEventListener("change", () => {
     uiLang = langSelect.value;

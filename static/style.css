@@ -523,6 +523,102 @@ body {
 }
 
 /* ============================================================
+   Settings screen
+   ============================================================ */
+.settings-group {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 4px 16px;
+  margin-bottom: 16px;
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.settings-heading {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 14px 0 6px;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 0.5px solid var(--separator);
+}
+
+.settings-group .settings-row:first-of-type {
+  border-top: none;
+}
+
+.settings-row-label {
+  font-size: 0.95rem;
+}
+
+.settings-row-value {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.settings-select {
+  font-size: 0.9rem;
+  padding: 6px 24px 6px 10px;
+  border: 1px solid var(--separator);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.settings-note {
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.5;
+  padding: 4px 0 14px;
+  margin: 0;
+}
+
+/* iOS-style toggle switch */
+.toggle-switch {
+  position: relative;
+  width: 46px;
+  height: 27px;
+  border: none;
+  border-radius: 14px;
+  background: var(--separator);
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  transition: background 0.2s ease;
+}
+
+.toggle-switch.on {
+  background: #34c759; /* iOS green */
+}
+
+.toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 23px;
+  height: 23px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s ease;
+}
+
+.toggle-switch.on .toggle-knob {
+  transform: translateX(19px);
+}
+
+/* ============================================================
    Bottom tab bar (Pleco-style)
    ============================================================ */
 .tabbar {

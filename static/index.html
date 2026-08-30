@@ -112,6 +112,47 @@
         <div id="word-list" class="word-list"></div>
       </div>
     </section>
+
+    <!-- Settings screen -->
+    <section id="settings-screen" class="screen">
+      <div class="settings-group">
+        <h3 class="settings-heading" data-i18n="settingsDefaultsHeading">默认设置</h3>
+        <div class="settings-row">
+          <span class="settings-row-label" data-i18n="settingShowPinyin">默认显示拼音</span>
+          <button id="setting-show-pinyin" class="toggle-switch" role="switch" aria-checked="true">
+            <span class="toggle-knob"></span>
+          </button>
+        </div>
+        <div class="settings-row">
+          <span class="settings-row-label" data-i18n="settingShowDefs">默认显示释义</span>
+          <button id="setting-show-defs" class="toggle-switch" role="switch" aria-checked="false">
+            <span class="toggle-knob"></span>
+          </button>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <h3 class="settings-heading" data-i18n="settingsCameraHeading">相机</h3>
+        <div class="settings-row">
+          <span class="settings-row-label" data-i18n="settingCameraFacing">默认摄像头</span>
+          <select id="setting-camera-facing" class="settings-select">
+            <option value="environment" data-i18n="cameraBack">后置</option>
+            <option value="user" data-i18n="cameraFront">前置</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <h3 class="settings-heading" data-i18n="settingsAboutHeading">关于</h3>
+        <div class="settings-row settings-row-static">
+          <span class="settings-row-label" data-i18n="settingVersion">版本</span>
+          <span class="settings-row-value">1.0.0</span>
+        </div>
+        <p class="settings-note" data-i18n="settingsCedictNote">
+          词典数据来自 CC-CEDICT，采用 CC BY-SA 4.0 协议授权。
+        </p>
+      </div>
+    </section>
   </main>
 
   <!-- Bottom tab bar (Pleco-style) -->

@@ -267,28 +267,33 @@ _GLOSS = {
 def translate_definition(def_text: str, lang: str) -> str:
     """Best-effort translation of an English definition to `lang`.
 
-    Uses the built-in glossary for common words; otherwise tries an online
-    translator (MyMemory, free, no key) and falls back to English if offline.
+    Uses the built-in glossary when every word in the definition is
+    covered (fast, works offline). If any word is missing from the
+    glossary, a partial substitution would produce a mixed-language mess,
+    so instead we try the online translator (MyMemory, free, no key) for a
+    coherent full-sentence result, falling back to plain English if that
+    also fails (e.g. offline).
     """
     if lang == "en" or lang not in _GLOSS:
         return def_text
+
     gloss = _GLOSS[lang]
     words = def_text.split()
     translated = []
+    fully_covered = True
     for w in words:
-        key = w.strip(".,;:()!?")
-        low = key.lower()
-        if low in gloss:
-            translated.append(gloss[low])
+        key = w.strip(".,;:()!?").lower()
+        if key in gloss:
+            translated.append(gloss[key])
         else:
             translated.append(w)
-    result = " ".join(translated)
-    # If nothing was translated (all words unknown), try the online translator.
-    if result == def_text:
-        online = _online_translate(def_text, lang)
-        if online:
-            return online
-    return result
+            fully_covered = False
+
+    if fully_covered:
+        return " ".join(translated)
+
+    online = _online_translate(def_text, lang)
+    return online if online else def_text
 
 
 def _online_translate(text: str, lang: str) -> str:
@@ -364,10 +369,16 @@ def rgb_to_hex(rgb):
 
 
 def average_color_in_region(img: Image.Image, box) -> tuple:
-    """Compute the average RGB colour inside an OCR bounding box.
+    """Compute the average *background* RGB colour inside an OCR bounding box.
 
     `box` is a list of 4 [x, y] corner points (top-left, top-right,
     bottom-right, bottom-left).
+
+    The box tightly wraps the printed glyphs, so a naive average mixes ink
+    color into the "background" estimate. Since ink is usually much darker
+    or much lighter than the page itself, pixels near the extremes of the
+    region's own luminance range are dropped before averaging, leaving a
+    more representative background colour for the contrast calculation.
     """
     xs = [int(p[0]) for p in box]
     ys = [int(p[1]) for p in box]
@@ -376,10 +387,15 @@ def average_color_in_region(img: Image.Image, box) -> tuple:
     if x1 <= x0 or y1 <= y0:
         return (255, 255, 255)
     region = img.crop((x0, y0, x1, y1)).convert("RGB")
-    arr = np.asarray(region, dtype=np.float64)
-    # Average, but ignore near-white/near-black extremes a little to get a
-    # more representative background colour.
-    return tuple(int(arr.mean(axis=(0, 1))[i]) for i in range(3))
+    arr = np.asarray(region, dtype=np.float64).reshape(-1, 3)
+    if arr.shape[0] >= 8:
+        luminance = arr.mean(axis=1)
+        lo, hi = np.percentile(luminance, [15, 85])
+        mask = (luminance >= lo) & (luminance <= hi)
+        if mask.any():
+            arr = arr[mask]
+    mean = arr.mean(axis=0)
+    return tuple(int(mean[i]) for i in range(3))
 
 
 # ---------------------------------------------------------------------------
@@ -469,14 +485,34 @@ def normalize_pinyin_query(text: str) -> str:
     return text
 
 
-def split_into_words(text: str):
-    """Split OCR text into words (longest dictionary matches first).
+# jieba does frequency-aware segmentation, which handles ambiguous strings
+# (e.g. distinguishing "有意见" as 有/意见 rather than 有意/见) much better
+# than naive greedy longest-dictionary-match. It's an optional dependency:
+# if it isn't installed, we fall back to the greedy matcher below.
+try:
+    import jieba
+    jieba.setLogLevel(logging.WARNING)
+    _HAS_JIEBA = True
+except ImportError:
+    _HAS_JIEBA = False
+    log.warning("jieba not installed; falling back to greedy dictionary "
+                "matching for word segmentation (pip install jieba for "
+                "better results).")
 
-    Returns a list of (word, pinyin) tuples.
-    """
-    if not text:
-        return []
-    # Try to match the longest dictionary entries greedily.
+
+def _pinyin_for_word(word: str) -> str:
+    """Best pinyin available for `word`: dictionary entry if present,
+    otherwise per-character pinyin from pypinyin."""
+    entries = _dict.lookup(word) if _dict else []
+    if entries:
+        return numbered_to_tone(entries[0]["pinyin"])
+    syls = get_pinyin_for_text(word)
+    return " ".join(syls) if syls else ""
+
+
+def _greedy_split_into_words(text: str):
+    """Fallback segmentation: longest dictionary match, greedily, falling
+    back to single characters. Returns a list of (word, pinyin) tuples."""
     words = []
     i = 0
     n = len(text)
@@ -492,17 +528,25 @@ def split_into_words(text: str):
                 matched = True
                 break
         if not matched:
-            # Single character
             ch = text[i]
-            entries = _dict.lookup_char(ch) if _dict else []
-            if entries:
-                py = numbered_to_tone(entries[0]["pinyin"])
-            else:
-                syls = get_pinyin_for_text(ch)
-                py = syls[0] if syls else ""
-            words.append((ch, py))
+            words.append((ch, _pinyin_for_word(ch)))
             i += 1
     return words
+
+
+def split_into_words(text: str):
+    """Split OCR text into words, with pinyin for each.
+
+    Uses jieba for frequency-aware segmentation when available, otherwise
+    falls back to greedy longest-dictionary-match.
+
+    Returns a list of (word, pinyin) tuples.
+    """
+    if not text:
+        return []
+    if not _HAS_JIEBA:
+        return _greedy_split_into_words(text)
+    return [(w, _pinyin_for_word(w)) for w in jieba.cut(text) if w.strip()]
 
 
 # ---------------------------------------------------------------------------
