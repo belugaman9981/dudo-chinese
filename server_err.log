@@ -1,0 +1,8 @@
+2026-08-29 21:03:46,281 INFO Loading dictionary cedict_ts.u8 ...
+2026-08-29 21:03:48,124 INFO Loaded 124935 dictionary entries.
+2026-08-29 21:03:49,612 INFO Built pinyin search index with 124935 entries.
+2026-08-29 21:03:49,822 INFO Starting server on http://0.0.0.0:8000  (open this on your iPad)
+[32mINFO[0m:     Started server process [[36m19476[0m]
+[32mINFO[0m:     Waiting for application startup.
+[32mINFO[0m:     Application startup complete.
+[32mINFO[0m:     Uvicorn running on [1mhttp://0.0.0.0:8000[0m (Press CTRL+C to quit)
