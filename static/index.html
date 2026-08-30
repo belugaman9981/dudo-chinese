@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>新华字典 · Photo Pinyin</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <!-- Top navigation bar (Pleco-style) -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <span class="app-logo">字</span>
+      <span class="app-title">新华字典</span>
+    </div>
+    <div class="topbar-right">
+      <label class="lang-label" for="lang-select">语言</label>
+      <select id="lang-select" class="lang-select"></select>
+    </div>
+  </header>
+
+  <!-- Main content area -->
+  <main class="content">
+
+    <!-- Camera / Capture screen -->
+    <section id="capture-screen" class="screen active">
+      <div class="capture-card">
+        <div class="camera-wrap">
+          <video id="camera" autoplay playsinline muted></video>
+          <div class="camera-overlay" id="camera-overlay">
+            <div class="frame-guide"></div>
+            <p class="overlay-hint">将文字对准取景框</p>
+          </div>
+          <canvas id="camera-canvas" style="display:none"></canvas>
+        </div>
+
+        <div class="capture-actions">
+          <button id="capture-btn" class="btn btn-capture" disabled>
+            <span class="btn-icon">📷</span>
+            <span class="btn-label">拍照</span>
+          </button>
+          <label class="btn btn-upload" for="file-input">
+            <span class="btn-icon">🖼️</span>
+            <span class="btn-label">上传图片</span>
+          </label>
+          <input type="file" id="file-input" accept="image/*" capture="environment" hidden />
+        </div>
+
+        <p id="camera-status" class="status"></p>
+      </div>
+    </section>
+
+    <!-- Processing screen -->
+    <section id="processing-screen" class="screen">
+      <div class="processing-card">
+        <div class="spinner"></div>
+        <h2>识别中…</h2>
+        <p id="processing-status">正在读取文字</p>
+      </div>
+    </section>
+
+    <!-- Pinyin search screen (Pleco-style "search by pinyin") -->
+    <section id="search-screen" class="screen">
+      <div class="search-bar-wrap">
+        <input
+          id="pinyin-search-input"
+          class="pinyin-search-input"
+          type="text"
+          inputmode="text"
+          autocapitalize="none"
+          autocorrect="off"
+          spellcheck="false"
+          placeholder="输入拼音，如 nihao 或 ni3hao3"
+        />
+      </div>
+      <div id="search-hint" class="search-hint">
+        不知道怎么写？输入拼音（可以不带声调），例如输入 "shouji" 查找 手机、手迹、手记…
+      </div>
+      <div id="search-results" class="word-list"></div>
+    </section>
+
+    <!-- Result screen -->
+    <section id="result-screen" class="screen">
+      <!-- Segmented control (Pleco-style) -->
+      <div class="segmented-control">
+        <button id="tab-page-btn" class="seg-btn active">页面</button>
+        <button id="tab-words-btn" class="seg-btn">词汇</button>
+      </div>
+
+      <!-- Page view: annotated image -->
+      <div id="page-view" class="view active">
+        <div class="result-toolbar">
+          <button id="back-btn" class="btn btn-small">← 新照片</button>
+          <div class="result-actions">
+            <button id="toggle-pinyin-btn" class="btn btn-small">隐藏拼音</button>
+          </div>
+        </div>
+        <div id="result-container" class="result-container">
+          <!-- The annotated image is rendered here -->
+        </div>
+      </div>
+
+      <!-- Words view: dictionary-style list -->
+      <div id="words-view" class="view">
+        <div class="words-toolbar">
+          <span class="words-count" id="words-count"></span>
+          <button id="toggle-defs-btn" class="btn btn-small">显示释义</button>
+        </div>
+        <div id="word-list" class="word-list"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Bottom tab bar (Pleco-style) -->
+  <nav class="tabbar">
+    <button class="tab-btn active" data-tab="camera">
+      <span class="tab-icon">📷</span>
+      <span class="tab-label">相机</span>
+    </button>
+    <button class="tab-btn" data-tab="search" id="search-tab-btn">
+      <span class="tab-icon">🔎</span>
+      <span class="tab-label">拼音查找</span>
+    </button>
+    <button class="tab-btn" data-tab="results" id="results-tab-btn">
+      <span class="tab-icon">📖</span>
+      <span class="tab-label">结果</span>
+    </button>
+    <button class="tab-btn" data-tab="settings">
+      <span class="tab-icon">⚙️</span>
+      <span class="tab-label">设置</span>
+    </button>
+  </nav>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

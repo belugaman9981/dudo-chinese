@@ -1,0 +1,605 @@
+/* ============================================================
+   新华字典 Photo Pinyin — Pleco-inspired styles
+   Clean, minimal, dictionary-app aesthetic with:
+   - Top navigation bar
+   - Bottom tab bar
+   - Segmented controls
+   - Tone-colored pinyin
+   - Card-based word entries
+   ============================================================ */
+
+:root {
+  /* Pleco-like palette */
+  --bg: #f2f2f7;              /* iOS light gray */
+  --card: #ffffff;
+  --ink: #1c1c1e;
+  --muted: #8e8e93;
+  --separator: #e5e5ea;
+  --accent: #007aff;          /* iOS blue */
+  --accent-dark: #0062cc;
+  --accent-light: #e8f1ff;
+
+  /* Tone colors (Pleco color-codes pinyin tones) */
+  --tone-1: #e53935;          /* 1st tone: red */
+  --tone-2: #fb8c00;          /* 2nd tone: orange */
+  --tone-3: #43a047;          /* 3rd tone: green */
+  --tone-4: #1e88e5;          /* 4th tone: blue */
+  --tone-5: #757575;          /* neutral: gray */
+
+  --radius: 12px;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.1);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --tabbar-height: 56px;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+/* ============================================================
+   Top navigation bar
+   ============================================================ */
+.topbar {
+  background: var(--card);
+  border-bottom: 0.5px solid var(--separator);
+  padding: calc(10px + var(--safe-top)) 16px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  z-index: 20;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.app-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+.app-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lang-label {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.lang-select {
+  font-size: 0.9rem;
+  padding: 6px 28px 6px 10px;
+  border: 1px solid var(--separator);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238e8e93' stroke-width='2'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+}
+
+/* ============================================================
+   Main content area
+   ============================================================ */
+.content {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 12px;
+  padding-bottom: calc(12px + var(--tabbar-height) + var(--safe-bottom));
+}
+
+.screen {
+  display: none;
+}
+
+.screen.active {
+  display: block;
+}
+
+/* ============================================================
+   Camera / Capture screen
+   ============================================================ */
+.capture-card {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.camera-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  background: #000;
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+}
+
+.camera-wrap video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.camera-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.frame-guide {
+  width: 82%;
+  height: 60%;
+  border: 2px dashed rgba(255, 255, 255, 0.7);
+  border-radius: 12px;
+}
+
+.overlay-hint {
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+  font-size: 0.85rem;
+  margin-top: 12px;
+}
+
+.capture-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+/* ============================================================
+   Buttons
+   ============================================================ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.08s ease, opacity 0.15s ease;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-capture {
+  background: var(--accent);
+  color: #fff;
+  flex: 1;
+  max-width: 200px;
+}
+
+.btn-capture:not(:disabled):hover {
+  background: var(--accent-dark);
+}
+
+.btn-upload {
+  background: var(--card);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  flex: 1;
+  max-width: 200px;
+}
+
+.btn-small {
+  font-size: 0.8rem;
+  padding: 7px 14px;
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--accent);
+  border: 1px solid var(--separator);
+}
+
+.btn-icon {
+  font-size: 1.2rem;
+}
+
+.btn-label {
+  font-size: 0.95rem;
+}
+
+.status {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin: 12px 0 0;
+  min-height: 1.2em;
+}
+
+.status.error {
+  color: #dc2626;
+}
+
+/* ============================================================
+   Processing screen
+   ============================================================ */
+.processing-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 40px;
+  text-align: center;
+  max-width: 360px;
+  width: 100%;
+  margin: 20vh auto 0;
+}
+
+.spinner {
+  width: 44px;
+  height: 44px;
+  border: 3px solid var(--separator);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  margin: 0 auto 16px;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.processing-card h2 {
+  margin: 0 0 8px;
+  font-size: 1.1rem;
+}
+
+.processing-card p {
+  color: var(--muted);
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+/* ============================================================
+   Segmented control (Pleco-style)
+   ============================================================ */
+.segmented-control {
+  display: flex;
+  background: var(--separator);
+  border-radius: 9px;
+  padding: 2px;
+  margin-bottom: 12px;
+  max-width: 320px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.seg-btn {
+  flex: 1;
+  padding: 8px 0;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.seg-btn.active {
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+/* ============================================================
+   Views
+   ============================================================ */
+.view {
+  display: none;
+}
+
+.view.active {
+  display: block;
+}
+
+/* ============================================================
+   Result / Page view
+   ============================================================ */
+.result-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.result-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.result-container {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 10px;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  position: relative;
+}
+
+#annotation-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  touch-action: manipulation;
+}
+
+/* ============================================================
+   Words view (dictionary-style list)
+   ============================================================ */
+.words-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.words-count {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.word-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Pleco-style word entry card */
+.word-item {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 14px 16px;
+  border-left: 3px solid transparent;
+  transition: border-color 0.15s ease;
+}
+
+.word-item.selected {
+  border-left-color: var(--accent);
+}
+
+.word-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.word-char {
+  font-size: 1.7rem;
+  font-weight: 700;
+  line-height: 1.2;
+  font-family: "PingFang SC", "Microsoft YaHei", "Songti SC", serif;
+}
+
+/* Tone-colored pinyin syllables */
+.word-pinyin {
+  font-size: 1.05rem;
+  font-weight: 600;
+  display: flex;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+
+.py-syllable {
+  padding: 1px 2px;
+  border-radius: 3px;
+}
+
+.py-tone-1 { color: var(--tone-1); }
+.py-tone-2 { color: var(--tone-2); }
+.py-tone-3 { color: var(--tone-3); }
+.py-tone-4 { color: var(--tone-4); }
+.py-tone-5 { color: var(--tone-5); }
+
+.word-defs {
+  margin-top: 8px;
+  color: var(--ink);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.word-defs ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.word-defs li {
+  margin-bottom: 3px;
+}
+
+.no-def {
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* ============================================================
+   Pinyin search screen (Pleco-style "search by pinyin")
+   ============================================================ */
+.search-bar-wrap {
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  padding-bottom: 10px;
+  z-index: 5;
+}
+
+.pinyin-search-input {
+  width: 100%;
+  font-size: 1.05rem;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--separator);
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  outline: none;
+}
+
+.pinyin-search-input:focus {
+  border-color: var(--accent);
+}
+
+.search-hint {
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.search-result-pinyin {
+  font-weight: 400;
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin-left: 6px;
+}
+
+/* ============================================================
+   Bottom tab bar (Pleco-style)
+   ============================================================ */
+.tabbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: calc(var(--tabbar-height) + var(--safe-bottom));
+  padding-bottom: var(--safe-bottom);
+  background: var(--card);
+  border-top: 0.5px solid var(--separator);
+  display: flex;
+  z-index: 30;
+}
+
+.tab-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+.tab-btn.active {
+  color: var(--accent);
+}
+
+.tab-icon {
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.tab-label {
+  font-size: 0.65rem;
+  font-weight: 500;
+}
+
+/* ============================================================
+   Toast
+   ============================================================ */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--tabbar-height) + var(--safe-bottom) + 16px);
+  transform: translateX(-50%);
+  background: rgba(28, 28, 30, 0.92);
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  max-width: 90vw;
+  text-align: center;
+}
+
+.toast.show {
+  opacity: 1;
+}
+
+/* ============================================================
+   Responsive (desktop)
+   ============================================================ */
+@media (min-width: 768px) {
+  .camera-wrap {
+    aspect-ratio: 16 / 10;
+    max-height: 60vh;
+  }
+  .result-container {
+    max-height: 70vh;
+  }
+}
