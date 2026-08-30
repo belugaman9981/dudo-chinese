@@ -636,7 +636,7 @@
     searchResults.innerHTML = "";
     if (results.length === 0) {
       searchResults.innerHTML =
-        '<p class="no-def">没有找到匹配的词 — 试试不带声调，如 "shouji"。</p>';
+        `<p class="no-def">${t("noSearchMatch")}</p>`;
       return;
     }
     results.forEach((entry) => {
@@ -672,13 +672,13 @@
 
   togglePinyinBtn.addEventListener("click", () => {
     showPinyin = !showPinyin;
-    togglePinyinBtn.textContent = showPinyin ? "隐藏拼音" : "显示拼音";
+    togglePinyinBtn.textContent = showPinyin ? t("hidePinyinBtn") : t("showPinyinBtn");
     if (currentImage) drawAnnotation();
   });
 
   toggleDefsBtn.addEventListener("click", () => {
     showDefs = !showDefs;
-    toggleDefsBtn.textContent = showDefs ? "隐藏释义" : "显示释义";
+    toggleDefsBtn.textContent = showDefs ? t("hideDefsBtn") : t("showDefsBtn");
     buildWordList();
   });
 
@@ -701,7 +701,7 @@
           showScreen(resultScreen);
           showPageView();
         } else {
-          toast("还没有结果 — 请先拍照或上传图片。");
+          toast(t("noResultsYet"));
         }
       } else if (tab === "search") {
         showScreen(searchScreen);
@@ -710,12 +710,14 @@
           runPinyinSearch(pinyinSearchInput.value);
         }
       } else if (tab === "settings") {
-        toast("设置功能即将推出。");
+        toast(t("settingsSoon"));
       }
     });
   });
 
   langSelect.addEventListener("change", () => {
+    uiLang = langSelect.value;
+    applyTranslations();
     if (currentImageDataUrl) {
       processImage(currentImageDataUrl);
     }
@@ -725,7 +727,10 @@
   });
 
   // ---------- Init ----------
-  loadLanguages();
+  loadLanguages().then(() => {
+    uiLang = langSelect.value;
+    applyTranslations();
+  });
   startCamera();
 
   window.addEventListener("beforeunload", stopCamera);
