@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>新华字典 · Photo Pinyin</title>
+  <style>
+    /* ============================================================
+       新华字典 Photo Pinyin — Pleco-inspired styles (demo build)
+       Self-contained for GitHub Pages (no backend).
+       ============================================================ */
+    :root {
+      --bg: #f2f2f7;
+      --card: #ffffff;
+      --ink: #1c1c1e;
+      --muted: #8e8e93;
+      --separator: #e5e5ea;
+      --accent: #007aff;
+      --accent-dark: #0062cc;
+      --accent-light: #e8f1ff;
+      --tone-1: #e53935;
+      --tone-2: #fb8c00;
+      --tone-3: #43a047;
+      --tone-4: #1e88e5;
+      --tone-5: #757575;
+      --radius: 12px;
+      --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.1);
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --tabbar-height: 56px;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; padding: 0; height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+      overscroll-behavior: none;
+    }
+
+    /* Top bar */
+    .topbar {
+      background: var(--card);
+      border-bottom: 0.5px solid var(--separator);
+      padding: calc(10px + var(--safe-top)) 16px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      z-index: 20;
+    }
+    .topbar-left { display: flex; align-items: center; gap: 10px; }
+    .app-logo {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: var(--accent); color: #fff;
+      font-size: 1.1rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    .app-title { font-size: 1.15rem; font-weight: 700; letter-spacing: 0.5px; }
+    .topbar-right { display: flex; align-items: center; gap: 8px; }
+    .lang-label { font-size: 0.75rem; color: var(--muted); }
+    .lang-select {
+      font-size: 0.9rem; padding: 6px 28px 6px 10px;
+      border: 1px solid var(--separator); border-radius: 8px;
+      background: var(--bg); color: var(--ink);
+      -webkit-appearance: none; appearance: none;
+    }
+
+    /* Content */
+    .content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    .screen { display: none; height: 100%; }
+    .screen.active { display: flex; flex-direction: column; }
+
+    /* Capture */
+    .capture-card { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+    .camera-wrap {
+      position: relative; width: 100%; aspect-ratio: 3 / 4;
+      background: #000; border-radius: var(--radius); overflow: hidden;
+      box-shadow: var(--shadow-lg);
+    }
+    .camera-wrap video { width: 100%; height: 100%; object-fit: cover; }
+    .camera-overlay {
+      position: absolute; inset: 0; display: flex;
+      align-items: center; justify-content: center; pointer-events: none;
+    }
+    .frame-guide {
+      width: 82%; height: 60%; border: 2px solid rgba(255,255,255,0.7);
+      border-radius: 12px;
+    }
+    .overlay-hint {
+      position: absolute; bottom: 14px; left: 0; right: 0;
+      text-align: center; color: #fff; font-size: 0.85rem;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+    }
+    .capture-actions { display: flex; gap: 12px; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 8px; border: none; border-radius: 12px;
+      font-size: 1rem; font-weight: 600; padding: 14px 18px;
+      cursor: pointer; background: var(--accent); color: #fff;
+      transition: background 0.15s ease, transform 0.05s ease;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.5; cursor: default; }
+    .btn-capture { flex: 1; }
+    .btn-upload { flex: 1; background: var(--card); color: var(--accent); border: 1px solid var(--separator); }
+    .btn-small { padding: 8px 12px; font-size: 0.85rem; border-radius: 8px; }
+    .status { font-size: 0.85rem; color: var(--muted); text-align: center; min-height: 1.2em; }
+    .status.error { color: #d93025; }
+
+    /* Demo notice */
+    .demo-notice {
+      background: var(--accent-light); border: 1px solid #cfe0ff;
+      color: #1a4f9e; border-radius: var(--radius);
+      padding: 12px 14px; font-size: 0.85rem; line-height: 1.5;
+    }
+    .demo-notice strong { display: block; margin-bottom: 2px; }
+
+    /* Processing */
+    .processing-card {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 16px;
+    }
+    .spinner {
+      width: 44px; height: 44px; border-radius: 50%;
+      border: 4px solid var(--separator); border-top-color: var(--accent);
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .processing-card h2 { margin: 0; font-size: 1.2rem; }
+    .processing-card p { margin: 0; color: var(--muted); }
+
+    /* Search */
+    .search-bar-wrap { padding: 16px 16px 8px; }
+    .pinyin-search-input {
+      width: 100%; padding: 14px 16px; font-size: 1rem;
+      border: 1px solid var(--separator); border-radius: 12px;
+      background: var(--card); color: var(--ink);
+    }
+    .search-hint { padding: 0 16px; font-size: 0.85rem; color: var(--muted); line-height: 1.5; }
+    .word-list { padding: 8px 16px 16px; display: flex; flex-direction: column; gap: 10px; }
+
+    /* Result */
+    .segmented-control {
+      display: flex; margin: 12px 16px; padding: 3px;
+      background: var(--separator); border-radius: 10px;
+    }
+    .seg-btn {
+      flex: 1; padding: 8px; border: none; border-radius: 8px;
+      background: transparent; color: var(--ink); font-size: 0.9rem; font-weight: 600;
+      cursor: pointer;
+    }
+    .seg-btn.active { background: var(--card); box-shadow: var(--shadow); }
+    .view { display: none; flex: 1; overflow-y: auto; }
+    .view.active { display: block; }
+    .result-toolbar, .words-toolbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 16px; gap: 8px;
+    }
+    .result-actions { display: flex; gap: 8px; }
+    .result-container { padding: 0 16px 16px; }
+    .result-container img { width: 100%; border-radius: var(--radius); box-shadow: var(--shadow); }
+    .words-count { font-size: 0.85rem; color: var(--muted); }
+
+    /* Word card */
+    .word-item {
+      background: var(--card); border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 12px 14px;
+    }
+    .word-head { display: flex; align-items: baseline; gap: 12px; }
+    .word-char { font-size: 1.5rem; font-weight: 700; font-family: "PingFang SC", "Microsoft YaHei", sans-serif; }
+    .word-pinyin { font-size: 1rem; }
+    .py-syllable { font-weight: 600; }
+    .py-tone-1 { color: var(--tone-1); }
+    .py-tone-2 { color: var(--tone-2); }
+    .py-tone-3 { color: var(--tone-3); }
+    .py-tone-4 { color: var(--tone-4); }
+    .py-tone-5 { color: var(--tone-5); }
+    .word-defs { margin-top: 8px; }
+    .word-defs ul { margin: 0; padding-left: 18px; }
+    .word-defs li { font-size: 0.9rem; color: var(--ink); margin-bottom: 2px; }
+    .no-def { color: var(--muted); font-size: 0.9rem; }
+
+    /* Tab bar */
+    .tabbar {
+      display: flex; background: var(--card);
+      border-top: 0.5px solid var(--separator);
+      padding-bottom: var(--safe-bottom); height: calc(var(--tabbar-height) + var(--safe-bottom));
+      flex-shrink: 0;
+    }
+    .tab-btn {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 2px; border: none; background: transparent;
+      color: var(--muted); font-size: 0.7rem; cursor: pointer;
+    }
+    .tab-btn .tab-icon { font-size: 1.3rem; }
+    .tab-btn.active { color: var(--accent); }
+
+    /* Toast */
+    .toast {
+      position: fixed; left: 50%; bottom: calc(var(--tabbar-height) + var(--safe-bottom) + 16px);
+      transform: translateX(-50%) translateY(20px);
+      background: rgba(28,28,30,0.92); color: #fff;
+      padding: 10px 18px; border-radius: 20px; font-size: 0.9rem;
+      opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s;
+      z-index: 100; max-width: 90%; text-align: center;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+  <!-- Top navigation bar (Pleco-style) -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <span class="app-logo">字</span>
+      <span class="app-title" data-i18n="appTitle">新华字典</span>
+    </div>
+    <div class="topbar-right">
+      <label class="lang-label" for="lang-select" data-i18n="langLabel">语言</label>
+      <select id="lang-select" class="lang-select"></select>
+    </div>
+  </header>
+
+  <!-- Main content area -->
+  <main class="content">
+
+    <!-- Camera / Capture screen -->
+    <section id="capture-screen" class="screen active">
+      <div class="capture-card">
+        <div class="demo-notice" data-i18n="demoNotice">
+          <strong>演示版 (Demo)</strong>
+          这是浏览器演示版 — 相机和上传可用，但 OCR 识别、拼音和释义需要完整版（本地运行 Python 服务器）。
+        </div>
+        <div class="camera-wrap">
+          <video id="camera" autoplay playsinline muted></video>
+          <div class="camera-overlay" id="camera-overlay">
+            <div class="frame-guide"></div>
+            <p class="overlay-hint" data-i18n="overlayHint">将文字对准取景框</p>
+          </div>
+          <canvas id="camera-canvas" style="display:none"></canvas>
+        </div>
+
+        <div class="capture-actions">
+          <button id="capture-btn" class="btn btn-capture" disabled>
+            <span class="btn-icon">📷</span>
+            <span class="btn-label" data-i18n="captureBtn">拍照</span>
+          </button>
+          <label class="btn btn-upload" for="file-input">
+            <span class="btn-icon">🖼️</span>
+            <span class="btn-label" data-i18n="uploadBtn">上传图片</span>
+          </label>
+          <input type="file" id="file-input" accept="image/*" capture="environment" hidden />
+        </div>
+
+        <p id="camera-status" class="status"></p>
+      </div>
+    </section>
+
+    <!-- Result screen (demo: just shows the photo) -->
+    <section id="result-screen" class="screen">
+      <div class="result-toolbar">
+        <button id="back-btn" class="btn btn-small" data-i18n="backBtn">← 新照片</button>
+      </div>
+      <div class="demo-notice" style="margin:0 16px 12px" data-i18n="demoResultNotice">
+        <strong>演示版 (Demo)</strong>
+        照片已加载。OCR 识别、拼音标注和释义需要完整版（本地运行 Python 服务器）。
+      </div>
+      <div id="result-container" class="result-container"></div>
+    </section>
+  </main>
+
+  <!-- Bottom tab bar (Pleco-style) -->
+  <nav class="tabbar">
+    <button class="tab-btn active" data-tab="camera">
+      <span class="tab-icon">📷</span>
+      <span class="tab-label" data-i18n="tabCamera">相机</span>
+    </button>
+    <button class="tab-btn" data-tab="results" id="results-tab-btn">
+      <span class="tab-icon">📖</span>
+      <span class="tab-label" data-i18n="tabResults">结果</span>
+    </button>
+    <button class="tab-btn" data-tab="settings">
+      <span class="tab-icon">⚙️</span>
+      <span class="tab-label" data-i18n="tabSettings">设置</span>
+    </button>
+  </nav>
+
+  <script>
+    /* ============================================================
+       新华字典 Photo Pinyin — demo frontend (self-contained)
+       Camera + upload work client-side. OCR/pinyin/definitions
+       require the full Python server version.
+       ============================================================ */
+    (function () {
+      "use strict";
+
+      var $ = function (id) { return document.getElementById(id); };
+
+      var captureScreen = $("capture-screen");
+      var resultScreen = $("result-screen");
+      var video = $("camera");
+      var cameraCanvas = $("camera-canvas");
+      var captureBtn = $("capture-btn");
+      var fileInput = $("file-input");
+      var cameraStatus = $("camera-status");
+      var langSelect = $("lang-select");
+      var resultContainer = $("result-container");
+      var backBtn = $("back-btn");
+      var tabButtons = document.querySelectorAll(".tab-btn");
+
+      var stream = null;
+      var currentImageDataUrl = null;
+      var uiLang = "en";
+
+      // ---------- UI translations ----------
+      var I18N = {
+        en: {
+          appTitle: "Xinhua Dictionary", langLabel: "Language",
+          demoNotice: "Demo build — camera and upload work, but OCR, pinyin and definitions need the full version (run the Python server locally).",
+          overlayHint: "Align text within the frame",
+          captureBtn: "Capture", uploadBtn: "Upload Photo",
+          backBtn: "← New Photo",
+          demoResultNotice: "Photo loaded. OCR, pinyin and definitions need the full version (run the Python server locally).",
+          tabCamera: "Camera", tabResults: "Results", tabSettings: "Settings",
+          cameraNotSupported: "This browser doesn't support the camera. Please use the upload button instead.",
+          cameraReady: "Camera ready — tap capture to scan.",
+          cameraError: "Couldn't access the camera: {msg}. You can still upload a photo.",
+          noCameraFrame: "No camera frame available.",
+          noResultsYet: "No results yet — take a photo or upload one first.",
+          settingsSoon: "Settings coming soon.",
+        },
+        zh: {
+          appTitle: "新华字典", langLabel: "语言",
+          demoNotice: "演示版 — 相机和上传可用，但 OCR 识别、拼音和释义需要完整版（本地运行 Python 服务器）。",
+          overlayHint: "将文字对准取景框",
+          captureBtn: "拍照", uploadBtn: "上传图片",
+          backBtn: "← 新照片",
+          demoResultNotice: "照片已加载。OCR 识别、拼音标注和释义需要完整版（本地运行 Python 服务器）。",
+          tabCamera: "相机", tabResults: "结果", tabSettings: "设置",
+          cameraNotSupported: "此浏览器不支持相机。请使用上传图片功能。",
+          cameraReady: "相机已就绪 — 拍照识别。",
+          cameraError: "无法访问相机：{msg}。您仍然可以上传图片。",
+          noCameraFrame: "没有可用的相机画面。",
+          noResultsYet: "还没有结果 — 请先拍照或上传图片。",
+          settingsSoon: "设置功能即将推出。",
+        },
+        es: {
+          appTitle: "Diccionario Xinhua", langLabel: "Idioma",
+          demoNotice: "Versión demo — la cámara y la subida funcionan, pero el OCR, el pinyin y las definiciones necesitan la versión completa (ejecuta el servidor Python localmente).",
+          overlayHint: "Alinea el texto dentro del marco",
+          captureBtn: "Capturar", uploadBtn: "Subir foto",
+          backBtn: "← Nueva foto",
+          demoResultNotice: "Foto cargada. El OCR, el pinyin y las definiciones necesitan la versión completa (ejecuta el servidor Python localmente).",
+          tabCamera: "Cámara", tabResults: "Resultados", tabSettings: "Ajustes",
+          cameraNotSupported: "Este navegador no admite la cámara. Usa el botón de subir foto.",
+          cameraReady: "Cámara lista — toca capturar para escanear.",
+          cameraError: "No se pudo acceder a la cámara: {msg}. Aún puedes subir una foto.",
+          noCameraFrame: "No hay imagen de cámara disponible.",
+          noResultsYet: "Aún no hay resultados — toma o sube una foto primero.",
+          settingsSoon: "Los ajustes estarán disponibles pronto.",
+        },
+      };
+
+      function uiStrings(lang) { return I18N[lang] || I18N.en; }
+      function t(key, vars) {
+        var str = uiStrings(uiLang)[key] || I18N.en[key] || key;
+        if (vars) {
+          for (var k in vars) { str = str.replace("{" + k + "}", vars[k]); }
+        }
+        return str;
+      }
+      function applyTranslations() {
+        document.querySelectorAll("[data-i18n]").forEach(function (el) {
+          el.textContent = t(el.dataset.i18n);
+        });
+        document.title = t("appTitle") + " · Photo Pinyin";
+      }
+
+      // ---------- Screen switching ----------
+      function showScreen(screen) {
+        [captureScreen, resultScreen].forEach(function (s) {
+          s.classList.remove("active");
+        });
+        screen.classList.add("active");
+        if (screen === captureScreen) setActiveTab("camera");
+        else if (screen === resultScreen) setActiveTab("results");
+      }
+      function setActiveTab(tabName) {
+        tabButtons.forEach(function (btn) {
+          btn.classList.toggle("active", btn.dataset.tab === tabName);
+        });
+      }
+
+      // ---------- Toast ----------
+      var toastEl = null;
+      function toast(msg) {
+        if (!toastEl) {
+          toastEl = document.createElement("div");
+          toastEl.className = "toast";
+          document.body.appendChild(toastEl);
+        }
+        toastEl.textContent = msg;
+        toastEl.classList.add("show");
+        clearTimeout(toastEl._t);
+        toastEl._t = setTimeout(function () { toastEl.classList.remove("show"); }, 2600);
+      }
+
+      // ---------- Language loading ----------
+      function loadLanguages() {
+        var langs = { en: "English", zh: "中文", es: "Español" };
+        langSelect.innerHTML = "";
+        for (var code in langs) {
+          var opt = document.createElement("option");
+          opt.value = code;
+          opt.textContent = langs[code] + " (" + code + ")";
+          langSelect.appendChild(opt);
+        }
+        langSelect.value = "en";
+        uiLang = "en";
+        applyTranslations();
+      }
+
+      // ---------- Camera ----------
+      function startCamera() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          cameraStatus.textContent = t("cameraNotSupported");
+          cameraStatus.classList.add("error");
+          return;
+        }
+        navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+          audio: false,
+        }).then(function (s) {
+          stream = s;
+          video.srcObject = stream;
+          return video.play();
+        }).then(function () {
+          captureBtn.disabled = false;
+          cameraStatus.textContent = t("cameraReady");
+          cameraStatus.classList.remove("error");
+        }).catch(function (err) {
+          console.error("Camera error:", err);
+          cameraStatus.textContent = t("cameraError", { msg: err.message || err.name });
+          cameraStatus.classList.add("error");
+          captureBtn.disabled = true;
+        });
+      }
+
+      function stopCamera() {
+        if (stream) {
+          stream.getTracks().forEach(function (tr) { tr.stop(); });
+          stream = null;
+        }
+        video.srcObject = null;
+        captureBtn.disabled = true;
+      }
+
+      function captureFrame() {
+        var w = video.videoWidth, h = video.videoHeight;
+        if (!w || !h) { toast(t("noCameraFrame")); return null; }
+        cameraCanvas.width = w;
+        cameraCanvas.height = h;
+        var ctx = cameraCanvas.getContext("2d");
+        ctx.drawImage(video, 0, 0, w, h);
+        return cameraCanvas.toDataURL("image/jpeg", 0.92);
+      }
+
+      // ---------- Show photo (demo: no OCR) ----------
+      function showPhoto(dataUrl) {
+        currentImageDataUrl = dataUrl;
+        resultContainer.innerHTML = "";
+        var img = document.createElement("img");
+        img.src = dataUrl;
+        img.alt = "Captured page";
+        resultContainer.appendChild(img);
+        showScreen(resultScreen);
+      }
+
+      // ---------- Event wiring ----------
+      captureBtn.addEventListener("click", function () {
+        var dataUrl = captureFrame();
+        if (dataUrl) showPhoto(dataUrl);
+      });
+
+      fileInput.addEventListener("change", function (e) {
+        var file = e.target.files && e.target.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function () { showPhoto(reader.result); };
+        reader.readAsDataURL(file);
+        fileInput.value = "";
+      });
+
+      backBtn.addEventListener("click", function () {
+        showScreen(captureScreen);
+        startCamera();
+      });
+
+      tabButtons.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var tab = btn.dataset.tab;
+          if (tab === "camera") {
+            showScreen(captureScreen);
+            startCamera();
+          } else if (tab === "results") {
+            if (currentImageDataUrl) {
+              showScreen(resultScreen);
+            } else {
+              toast(t("noResultsYet"));
+            }
+          } else if (tab === "settings") {
+            toast(t("settingsSoon"));
+          }
+        });
+      });
+
+      langSelect.addEventListener("change", function () {
+        uiLang = langSelect.value;
+        applyTranslations();
+      });
+
+      // ---------- Init ----------
+      loadLanguages();
+      startCamera();
+
+      window.addEventListener("beforeunload", stopCamera);
+      document.addEventListener("visibilitychange", function () {
+        if (document.hidden) stopCamera();
+      });
+    })();
+  </script>
+</body>
+</html>
