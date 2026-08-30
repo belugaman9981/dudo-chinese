@@ -13,10 +13,10 @@
   <header class="topbar">
     <div class="topbar-left">
       <span class="app-logo">字</span>
-      <span class="app-title">新华字典</span>
+      <span class="app-title" data-i18n="appTitle">新华字典</span>
     </div>
     <div class="topbar-right">
-      <label class="lang-label" for="lang-select">语言</label>
+      <label class="lang-label" for="lang-select" data-i18n="langLabel">语言</label>
       <select id="lang-select" class="lang-select"></select>
     </div>
   </header>
@@ -31,7 +31,7 @@
           <video id="camera" autoplay playsinline muted></video>
           <div class="camera-overlay" id="camera-overlay">
             <div class="frame-guide"></div>
-            <p class="overlay-hint">将文字对准取景框</p>
+            <p class="overlay-hint" data-i18n="overlayHint">将文字对准取景框</p>
           </div>
           <canvas id="camera-canvas" style="display:none"></canvas>
         </div>
@@ -39,11 +39,11 @@
         <div class="capture-actions">
           <button id="capture-btn" class="btn btn-capture" disabled>
             <span class="btn-icon">📷</span>
-            <span class="btn-label">拍照</span>
+            <span class="btn-label" data-i18n="captureBtn">拍照</span>
           </button>
           <label class="btn btn-upload" for="file-input">
             <span class="btn-icon">🖼️</span>
-            <span class="btn-label">上传图片</span>
+            <span class="btn-label" data-i18n="uploadBtn">上传图片</span>
           </label>
           <input type="file" id="file-input" accept="image/*" capture="environment" hidden />
         </div>
@@ -56,8 +56,8 @@
     <section id="processing-screen" class="screen">
       <div class="processing-card">
         <div class="spinner"></div>
-        <h2>识别中…</h2>
-        <p id="processing-status">正在读取文字</p>
+        <h2 data-i18n="processingTitle">识别中…</h2>
+        <p id="processing-status" data-i18n="processingStatus">正在读取文字</p>
       </div>
     </section>
 
@@ -72,10 +72,11 @@
           autocapitalize="none"
           autocorrect="off"
           spellcheck="false"
+          data-i18n-placeholder="searchPlaceholder"
           placeholder="输入拼音，如 nihao 或 ni3hao3"
         />
       </div>
-      <div id="search-hint" class="search-hint">
+      <div id="search-hint" class="search-hint" data-i18n="searchHint">
         不知道怎么写？输入拼音（可以不带声调），例如输入 "shouji" 查找 手机、手迹、手记…
       </div>
       <div id="search-results" class="word-list"></div>
@@ -85,16 +86,16 @@
     <section id="result-screen" class="screen">
       <!-- Segmented control (Pleco-style) -->
       <div class="segmented-control">
-        <button id="tab-page-btn" class="seg-btn active">页面</button>
-        <button id="tab-words-btn" class="seg-btn">词汇</button>
+        <button id="tab-page-btn" class="seg-btn active" data-i18n="segPage">页面</button>
+        <button id="tab-words-btn" class="seg-btn" data-i18n="segWords">词汇</button>
       </div>
 
       <!-- Page view: annotated image -->
       <div id="page-view" class="view active">
         <div class="result-toolbar">
-          <button id="back-btn" class="btn btn-small">← 新照片</button>
+          <button id="back-btn" class="btn btn-small" data-i18n="backBtn">← 新照片</button>
           <div class="result-actions">
-            <button id="toggle-pinyin-btn" class="btn btn-small">隐藏拼音</button>
+            <button id="toggle-pinyin-btn" class="btn btn-small" data-i18n="hidePinyinBtn">隐藏拼音</button>
           </div>
         </div>
         <div id="result-container" class="result-container">
@@ -106,7 +107,7 @@
       <div id="words-view" class="view">
         <div class="words-toolbar">
           <span class="words-count" id="words-count"></span>
-          <button id="toggle-defs-btn" class="btn btn-small">显示释义</button>
+          <button id="toggle-defs-btn" class="btn btn-small" data-i18n="showDefsBtn">显示释义</button>
         </div>
         <div id="word-list" class="word-list"></div>
       </div>
@@ -117,19 +118,19 @@
   <nav class="tabbar">
     <button class="tab-btn active" data-tab="camera">
       <span class="tab-icon">📷</span>
-      <span class="tab-label">相机</span>
+      <span class="tab-label" data-i18n="tabCamera">相机</span>
     </button>
     <button class="tab-btn" data-tab="search" id="search-tab-btn">
       <span class="tab-icon">🔎</span>
-      <span class="tab-label">拼音查找</span>
+      <span class="tab-label" data-i18n="tabSearch">拼音查找</span>
     </button>
     <button class="tab-btn" data-tab="results" id="results-tab-btn">
       <span class="tab-icon">📖</span>
-      <span class="tab-label">结果</span>
+      <span class="tab-label" data-i18n="tabResults">结果</span>
     </button>
     <button class="tab-btn" data-tab="settings">
       <span class="tab-icon">⚙️</span>
-      <span class="tab-label">设置</span>
+      <span class="tab-label" data-i18n="tabSettings">设置</span>
     </button>
   </nav>
 

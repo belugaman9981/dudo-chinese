@@ -56,6 +56,125 @@
   let showDefs = false;
   let annotationCanvas = null;
   let selectedItem = null;
+  let uiLang = "en";
+
+  // ---------- UI translations ----------
+  // Full interface strings (buttons, labels, hints, messages) for each
+  // supported language. Falls back to English for missing keys/languages.
+  const I18N = {
+    en: {
+      appTitle: "Xinhua Dictionary", langLabel: "Language",
+      overlayHint: "Align text within the frame",
+      captureBtn: "Capture", uploadBtn: "Upload Photo",
+      processingTitle: "Recognizing…", processingStatus: "Reading text",
+      searchPlaceholder: "Type pinyin, e.g. nihao or ni3hao3",
+      searchHint: "Don't know how to write it? Type the pinyin (tones optional), e.g. \"shouji\" to find 手机, 手迹, 手记…",
+      segPage: "Page", segWords: "Words",
+      backBtn: "← New Photo", hidePinyinBtn: "Hide Pinyin", showPinyinBtn: "Show Pinyin",
+      showDefsBtn: "Show Definitions", hideDefsBtn: "Hide Definitions",
+      tabCamera: "Camera", tabSearch: "Pinyin Search", tabResults: "Results", tabSettings: "Settings",
+      cameraNotSupported: "This browser doesn't support the camera. Please use the upload button instead.",
+      cameraReady: "Camera ready — tap capture to scan.",
+      cameraError: "Couldn't access the camera: {msg}. You can still upload a photo.",
+      noCameraFrame: "No camera frame available.",
+      uploadingImage: "Uploading photo…",
+      recognizingText: "Recognizing text (OCR)…",
+      serverError: "Server error",
+      noCharsDetected: "No Chinese characters detected.",
+      processingFailed: "Processing failed: {msg}",
+      noTextHere: "No text there — tap a highlighted text block.",
+      noWordsDetected: "No words detected.",
+      wordsCount: "{n} words",
+      noDefFound: "No definition found.",
+      noSearchMatch: "No matching words — try without tones, e.g. \"shouji\".",
+      noResultsYet: "No results yet — take a photo or upload one first.",
+      settingsSoon: "Settings coming soon.",
+    },
+    zh: {
+      appTitle: "新华字典", langLabel: "语言",
+      overlayHint: "将文字对准取景框",
+      captureBtn: "拍照", uploadBtn: "上传图片",
+      processingTitle: "识别中…", processingStatus: "正在读取文字",
+      searchPlaceholder: "输入拼音，如 nihao 或 ni3hao3",
+      searchHint: "不知道怎么写？输入拼音（可以不带声调），例如输入 \"shouji\" 查找 手机、手迹、手记…",
+      segPage: "页面", segWords: "词汇",
+      backBtn: "← 新照片", hidePinyinBtn: "隐藏拼音", showPinyinBtn: "显示拼音",
+      showDefsBtn: "显示释义", hideDefsBtn: "隐藏释义",
+      tabCamera: "相机", tabSearch: "拼音查找", tabResults: "结果", tabSettings: "设置",
+      cameraNotSupported: "此浏览器不支持相机。请使用上传图片功能。",
+      cameraReady: "相机已就绪 — 拍照识别。",
+      cameraError: "无法访问相机：{msg}。您仍然可以上传图片。",
+      noCameraFrame: "没有可用的相机画面。",
+      uploadingImage: "正在上传图片…",
+      recognizingText: "正在识别文字 (OCR)…",
+      serverError: "服务器错误",
+      noCharsDetected: "未检测到中文字符。",
+      processingFailed: "处理失败：{msg}",
+      noTextHere: "此处没有文字 — 请点击高亮的文字区域。",
+      noWordsDetected: "未检测到词汇。",
+      wordsCount: "{n} 个词",
+      noDefFound: "未找到释义。",
+      noSearchMatch: "没有找到匹配的词 — 试试不带声调，如 \"shouji\"。",
+      noResultsYet: "还没有结果 — 请先拍照或上传图片。",
+      settingsSoon: "设置功能即将推出。",
+    },
+    es: {
+      appTitle: "Diccionario Xinhua", langLabel: "Idioma",
+      overlayHint: "Alinea el texto dentro del marco",
+      captureBtn: "Capturar", uploadBtn: "Subir foto",
+      processingTitle: "Reconociendo…", processingStatus: "Leyendo texto",
+      searchPlaceholder: "Escribe el pinyin, p. ej. nihao o ni3hao3",
+      searchHint: "¿No sabes escribirlo? Escribe el pinyin (tonos opcionales), p. ej. \"shouji\" para encontrar 手机, 手迹, 手记…",
+      segPage: "Página", segWords: "Palabras",
+      backBtn: "← Nueva foto", hidePinyinBtn: "Ocultar pinyin", showPinyinBtn: "Mostrar pinyin",
+      showDefsBtn: "Mostrar definiciones", hideDefsBtn: "Ocultar definiciones",
+      tabCamera: "Cámara", tabSearch: "Buscar pinyin", tabResults: "Resultados", tabSettings: "Ajustes",
+      cameraNotSupported: "Este navegador no admite la cámara. Usa el botón de subir foto.",
+      cameraReady: "Cámara lista — toca capturar para escanear.",
+      cameraError: "No se pudo acceder a la cámara: {msg}. Aún puedes subir una foto.",
+      noCameraFrame: "No hay imagen de cámara disponible.",
+      uploadingImage: "Subiendo foto…",
+      recognizingText: "Reconociendo texto (OCR)…",
+      serverError: "Error del servidor",
+      noCharsDetected: "No se detectaron caracteres chinos.",
+      processingFailed: "Error al procesar: {msg}",
+      noTextHere: "No hay texto aquí — toca un bloque resaltado.",
+      noWordsDetected: "No se detectaron palabras.",
+      wordsCount: "{n} palabras",
+      noDefFound: "No se encontró definición.",
+      noSearchMatch: "No se encontraron palabras — prueba sin tonos, p. ej. \"shouji\".",
+      noResultsYet: "Aún no hay resultados — toma o sube una foto primero.",
+      settingsSoon: "Los ajustes estarán disponibles pronto.",
+    },
+  };
+
+  // Languages without a full UI translation fall back to English strings.
+  function uiStrings(lang) {
+    return I18N[lang] || I18N.en;
+  }
+
+  function t(key, vars) {
+    let str = uiStrings(uiLang)[key] || I18N.en[key] || key;
+    if (vars) {
+      for (const [k, v] of Object.entries(vars)) {
+        str = str.replace(`{${k}}`, v);
+      }
+    }
+    return str;
+  }
+
+  function applyTranslations() {
+    document.querySelectorAll("[data-i18n]").forEach((el) => {
+      el.textContent = t(el.dataset.i18n);
+    });
+    document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+      el.setAttribute("placeholder", t(el.dataset.i18nPlaceholder));
+    });
+    document.title = t("appTitle") + " · Photo Pinyin";
+    // Re-apply dynamic toggle-button labels that depend on state.
+    togglePinyinBtn.textContent = showPinyin ? t("hidePinyinBtn") : t("showPinyinBtn");
+    toggleDefsBtn.textContent = showDefs ? t("hideDefsBtn") : t("showDefsBtn");
+  }
 
   // ---------- Screen switching ----------
   function showScreen(screen) {
@@ -127,8 +246,7 @@
   // ---------- Camera ----------
   async function startCamera() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      cameraStatus.textContent =
-        "此浏览器不支持相机。请使用上传图片功能。";
+      cameraStatus.textContent = t("cameraNotSupported");
       cameraStatus.classList.add("error");
       return;
     }
@@ -145,13 +263,11 @@
       video.srcObject = stream;
       await video.play();
       captureBtn.disabled = false;
-      cameraStatus.textContent = "相机已就绪 — 拍照识别。";
+      cameraStatus.textContent = t("cameraReady");
       cameraStatus.classList.remove("error");
     } catch (err) {
       console.error("Camera error:", err);
-      cameraStatus.textContent =
-        "无法访问相机：" + (err.message || err.name) +
-        "。您仍然可以上传图片。";
+      cameraStatus.textContent = t("cameraError", { msg: err.message || err.name });
       cameraStatus.classList.add("error");
       captureBtn.disabled = true;
     }
@@ -170,7 +286,7 @@
     const w = video.videoWidth;
     const h = video.videoHeight;
     if (!w || !h) {
-      toast("没有可用的相机画面。");
+      toast(t("noCameraFrame"));
       return null;
     }
     cameraCanvas.width = w;
@@ -183,7 +299,7 @@
   // ---------- Processing ----------
   async function processImage(dataUrl) {
     showScreen(processingScreen);
-    processingStatus.textContent = "正在上传图片…";
+    processingStatus.textContent = t("uploadingImage");
 
     const blob = dataUrlToBlob(dataUrl);
     const formData = new FormData();
@@ -191,14 +307,14 @@
     formData.append("lang", langSelect.value);
 
     try {
-      processingStatus.textContent = "正在识别文字 (OCR)…";
+      processingStatus.textContent = t("recognizingText");
       const res = await fetch("/api/ocr", { method: "POST", body: formData });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || "服务器错误");
+        throw new Error(data.error || t("serverError"));
       }
       if (!data.items || data.items.length === 0) {
-        toast(data.message || "未检测到中文字符。");
+        toast(data.message || t("noCharsDetected"));
         showScreen(captureScreen);
         return;
       }
@@ -206,7 +322,7 @@
       renderResult(dataUrl);
     } catch (err) {
       console.error(err);
-      toast("处理失败：" + err.message);
+      toast(t("processingFailed", { msg: err.message }));
       showScreen(captureScreen);
     }
   }
@@ -329,7 +445,7 @@
         return;
       }
     }
-    toast("此处没有文字 — 请点击高亮的文字区域。");
+    toast(t("noTextHere"));
   }
 
   function highlightItem(item) {
@@ -376,12 +492,12 @@
 
     wordList.innerHTML = "";
     if (seen.size === 0) {
-      wordList.innerHTML = '<p class="no-def">未检测到词汇。</p>';
+      wordList.innerHTML = `<p class="no-def">${t("noWordsDetected")}</p>`;
       wordsCount.textContent = "";
       return;
     }
 
-    wordsCount.textContent = `${seen.size} 个词`;
+      wordsCount.textContent = t("wordsCount", { n: seen.size });
     for (const wd of seen.values()) {
       wordList.appendChild(createWordCard(wd));
     }
@@ -428,7 +544,7 @@
       });
       defs.appendChild(ul);
     } else if (showDefs) {
-      defs.innerHTML = '<span class="no-def">未找到释义。</span>';
+      defs.innerHTML = `<span class="no-def">${t("noDefFound")}</span>`;
     }
     div.appendChild(defs);
 
@@ -482,7 +598,7 @@
       });
       defs.appendChild(ul);
     } else {
-      defs.innerHTML = '<span class="no-def">未找到释义。</span>';
+      defs.innerHTML = `<span class="no-def">${t("noDefFound")}</span>`;
     }
     div.appendChild(defs);
 
