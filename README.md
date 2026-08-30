@@ -9,6 +9,16 @@ and the app will:
 - Show **definitions** for each word, in your chosen language
 - Work in the **browser on an iPad** (and any phone/desktop)
 
+## Live demo (GitHub Pages)
+
+A **browser-only demo** is hosted on GitHub Pages:
+
+👉 **https://belugaman9981.github.io/dudo-chinese/**
+
+The demo lets you use the camera and upload photos, but **OCR, pinyin, and
+definitions require the full Python server** (GitHub Pages can't run Python).
+To use all features, run the server locally as described below.
+
 ## How it works
 
 ```
