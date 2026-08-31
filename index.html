@@ -37,7 +37,7 @@
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
         "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
-      background: var(--bg);
+      background: #e4e4e9;
       color: var(--ink);
       display: flex;
       flex-direction: column;
@@ -56,6 +56,8 @@
       justify-content: space-between;
       flex-shrink: 0;
       z-index: 20;
+      width: 100%; max-width: 480px; margin: 0 auto;
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.04), 0 2px 12px rgba(0,0,0,0.06);
     }
     .topbar-left { display: flex; align-items: center; gap: 10px; }
     .app-logo {
@@ -76,7 +78,10 @@
     }
 
     /* Content */
-    .content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    .content {
+      flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+      width: 100%; max-width: 480px; margin: 0 auto;
+    }
     .screen { display: none; height: 100%; }
     .screen.active { display: flex; flex-direction: column; }
 
@@ -196,6 +201,7 @@
       border-top: 0.5px solid var(--separator);
       padding-bottom: var(--safe-bottom); height: calc(var(--tabbar-height) + var(--safe-bottom));
       flex-shrink: 0;
+      width: 100%; max-width: 480px; margin: 0 auto;
     }
     .tab-btn {
       flex: 1; display: flex; flex-direction: column; align-items: center;
