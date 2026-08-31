@@ -37,7 +37,7 @@
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
         "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
-      background: #e4e4e9;
+      background: var(--bg);
       color: var(--ink);
       display: flex;
       flex-direction: column;
@@ -56,8 +56,6 @@
       justify-content: space-between;
       flex-shrink: 0;
       z-index: 20;
-      width: 100%; max-width: 480px; margin: 0 auto;
-      box-shadow: 0 0 0 1px rgba(0,0,0,0.04), 0 2px 12px rgba(0,0,0,0.06);
     }
     .topbar-left { display: flex; align-items: center; gap: 10px; }
     .app-logo {
@@ -78,10 +76,7 @@
     }
 
     /* Content */
-    .content {
-      flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
-      width: 100%; max-width: 480px; margin: 0 auto;
-    }
+    .content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
     .screen { display: none; height: 100%; }
     .screen.active { display: flex; flex-direction: column; }
 
@@ -201,7 +196,6 @@
       border-top: 0.5px solid var(--separator);
       padding-bottom: var(--safe-bottom); height: calc(var(--tabbar-height) + var(--safe-bottom));
       flex-shrink: 0;
-      width: 100%; max-width: 480px; margin: 0 auto;
     }
     .tab-btn {
       flex: 1; display: flex; flex-direction: column; align-items: center;
@@ -221,6 +215,44 @@
       z-index: 100; max-width: 90%; text-align: center;
     }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* Settings screen */
+    .settings-group {
+      background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
+      padding: 4px 16px; margin: 12px 16px;
+    }
+    .settings-heading {
+      font-size: 0.72rem; font-weight: 600; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.04em; margin: 14px 0 6px;
+    }
+    .settings-row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; padding: 12px 0; border-top: 0.5px solid var(--separator);
+    }
+    .settings-group .settings-row:first-of-type { border-top: none; }
+    .settings-row-label { font-size: 0.95rem; }
+    .settings-row.disabled .settings-row-label { color: var(--muted); }
+    .settings-row-value { font-size: 0.9rem; color: var(--muted); }
+    .settings-select {
+      font-size: 0.9rem; padding: 6px 24px 6px 10px;
+      border: 1px solid var(--separator); border-radius: 8px;
+      background: var(--bg); color: var(--ink);
+    }
+    .settings-note {
+      font-size: 0.78rem; color: var(--muted); line-height: 1.5; padding: 4px 0 14px; margin: 0;
+    }
+    .toggle-switch {
+      position: relative; width: 46px; height: 27px; border: none; border-radius: 14px;
+      background: var(--separator); cursor: pointer; flex-shrink: 0; padding: 0;
+      transition: background 0.2s ease;
+    }
+    .toggle-switch.on { background: #34c759; }
+    .toggle-switch:disabled { cursor: not-allowed; opacity: 0.6; }
+    .toggle-knob {
+      position: absolute; top: 2px; left: 2px; width: 23px; height: 23px; border-radius: 50%;
+      background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.25); transition: transform 0.2s ease;
+    }
+    .toggle-switch.on .toggle-knob { transform: translateX(19px); }
   </style>
 </head>
 <body>
@@ -282,6 +314,42 @@
       </div>
       <div id="result-container" class="result-container"></div>
     </section>
+
+    <!-- Settings screen -->
+    <section id="settings-screen" class="screen">
+      <div class="settings-group">
+        <h3 class="settings-heading" data-i18n="settingsDefaultsHeading">默认设置</h3>
+        <div class="settings-row disabled">
+          <span class="settings-row-label" data-i18n="settingShowPinyin">默认显示拼音</span>
+          <button class="toggle-switch on" disabled aria-checked="true" role="switch"><span class="toggle-knob"></span></button>
+        </div>
+        <div class="settings-row disabled">
+          <span class="settings-row-label" data-i18n="settingShowDefs">默认显示释义</span>
+          <button class="toggle-switch" disabled aria-checked="false" role="switch"><span class="toggle-knob"></span></button>
+        </div>
+        <p class="settings-note" data-i18n="settingsDemoOnly">这两项在演示版中不生效，需要完整版（本地运行 Python 服务器）。</p>
+      </div>
+
+      <div class="settings-group">
+        <h3 class="settings-heading" data-i18n="settingsCameraHeading">相机</h3>
+        <div class="settings-row">
+          <span class="settings-row-label" data-i18n="settingCameraFacing">默认摄像头</span>
+          <select id="setting-camera-facing" class="settings-select">
+            <option value="environment" data-i18n="cameraBack">后置</option>
+            <option value="user" data-i18n="cameraFront">前置</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <h3 class="settings-heading" data-i18n="settingsAboutHeading">关于</h3>
+        <div class="settings-row settings-row-static">
+          <span class="settings-row-label" data-i18n="settingVersion">版本</span>
+          <span class="settings-row-value">1.0.0 (demo)</span>
+        </div>
+        <p class="settings-note" data-i18n="settingsCedictNote">词典数据来自 CC-CEDICT，采用 CC BY-SA 4.0 协议授权。</p>
+      </div>
+    </section>
   </main>
 
   <!-- Bottom tab bar (Pleco-style) -->
@@ -313,6 +381,7 @@
 
       var captureScreen = $("capture-screen");
       var resultScreen = $("result-screen");
+      var settingsScreen = $("settings-screen");
       var video = $("camera");
       var cameraCanvas = $("camera-canvas");
       var captureBtn = $("capture-btn");
@@ -322,10 +391,27 @@
       var resultContainer = $("result-container");
       var backBtn = $("back-btn");
       var tabButtons = document.querySelectorAll(".tab-btn");
+      var settingCameraFacingSelect = $("setting-camera-facing");
 
       var stream = null;
       var currentImageDataUrl = null;
       var uiLang = "en";
+
+      // ---------- Settings persistence (camera facing only — the demo
+      // build has no OCR/pinyin/definitions, so those toggles live in the
+      // full app's settings, not here) ----------
+      var SETTINGS_KEY = "xinhua-photo-pinyin-demo-settings";
+      function loadCameraFacing() {
+        try {
+          return localStorage.getItem(SETTINGS_KEY) || "environment";
+        } catch (e) {
+          return "environment";
+        }
+      }
+      function saveCameraFacing(v) {
+        try { localStorage.setItem(SETTINGS_KEY, v); } catch (e) { /* ignore */ }
+      }
+      var cameraFacing = loadCameraFacing();
 
       // ---------- UI translations ----------
       var I18N = {
@@ -342,7 +428,16 @@
           cameraError: "Couldn't access the camera: {msg}. You can still upload a photo.",
           noCameraFrame: "No camera frame available.",
           noResultsYet: "No results yet — take a photo or upload one first.",
-          settingsSoon: "Settings coming soon.",
+          settingsDefaultsHeading: "Defaults",
+          settingShowPinyin: "Show pinyin by default",
+          settingShowDefs: "Show definitions by default",
+          settingsDemoOnly: "These don't take effect in this demo — they need the full version (run the Python server locally).",
+          settingsCameraHeading: "Camera",
+          settingCameraFacing: "Default camera",
+          cameraBack: "Back", cameraFront: "Front",
+          settingsAboutHeading: "About",
+          settingVersion: "Version",
+          settingsCedictNote: "Dictionary data from CC-CEDICT, licensed under CC BY-SA 4.0.",
         },
         zh: {
           appTitle: "新华字典", langLabel: "语言",
@@ -357,7 +452,16 @@
           cameraError: "无法访问相机：{msg}。您仍然可以上传图片。",
           noCameraFrame: "没有可用的相机画面。",
           noResultsYet: "还没有结果 — 请先拍照或上传图片。",
-          settingsSoon: "设置功能即将推出。",
+          settingsDefaultsHeading: "默认设置",
+          settingShowPinyin: "默认显示拼音",
+          settingShowDefs: "默认显示释义",
+          settingsDemoOnly: "这两项在演示版中不生效，需要完整版（本地运行 Python 服务器）。",
+          settingsCameraHeading: "相机",
+          settingCameraFacing: "默认摄像头",
+          cameraBack: "后置", cameraFront: "前置",
+          settingsAboutHeading: "关于",
+          settingVersion: "版本",
+          settingsCedictNote: "词典数据来自 CC-CEDICT，采用 CC BY-SA 4.0 协议授权。",
         },
         es: {
           appTitle: "Diccionario Xinhua", langLabel: "Idioma",
@@ -372,7 +476,16 @@
           cameraError: "No se pudo acceder a la cámara: {msg}. Aún puedes subir una foto.",
           noCameraFrame: "No hay imagen de cámara disponible.",
           noResultsYet: "Aún no hay resultados — toma o sube una foto primero.",
-          settingsSoon: "Los ajustes estarán disponibles pronto.",
+          settingsDefaultsHeading: "Valores predeterminados",
+          settingShowPinyin: "Mostrar pinyin por defecto",
+          settingShowDefs: "Mostrar definiciones por defecto",
+          settingsDemoOnly: "Esto no tiene efecto en esta demo — se necesita la versión completa (ejecuta el servidor Python localmente).",
+          settingsCameraHeading: "Cámara",
+          settingCameraFacing: "Cámara predeterminada",
+          cameraBack: "Trasera", cameraFront: "Frontal",
+          settingsAboutHeading: "Acerca de",
+          settingVersion: "Versión",
+          settingsCedictNote: "Datos del diccionario de CC-CEDICT, con licencia CC BY-SA 4.0.",
         },
       };
 
@@ -393,12 +506,13 @@
 
       // ---------- Screen switching ----------
       function showScreen(screen) {
-        [captureScreen, resultScreen].forEach(function (s) {
+        [captureScreen, resultScreen, settingsScreen].forEach(function (s) {
           s.classList.remove("active");
         });
         screen.classList.add("active");
         if (screen === captureScreen) setActiveTab("camera");
         else if (screen === resultScreen) setActiveTab("results");
+        else if (screen === settingsScreen) setActiveTab("settings");
       }
       function setActiveTab(tabName) {
         tabButtons.forEach(function (btn) {
@@ -443,7 +557,7 @@
           return;
         }
         navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+          video: { facingMode: { ideal: cameraFacing }, width: { ideal: 1920 }, height: { ideal: 1080 } },
           audio: false,
         }).then(function (s) {
           stream = s;
@@ -524,10 +638,20 @@
               toast(t("noResultsYet"));
             }
           } else if (tab === "settings") {
-            toast(t("settingsSoon"));
+            showScreen(settingsScreen);
           }
         });
       });
+
+      settingCameraFacingSelect.addEventListener("change", function () {
+        cameraFacing = settingCameraFacingSelect.value;
+        saveCameraFacing(cameraFacing);
+        if (stream) {
+          stopCamera();
+          startCamera();
+        }
+      });
+      settingCameraFacingSelect.value = cameraFacing;
 
       langSelect.addEventListener("change", function () {
         uiLang = langSelect.value;

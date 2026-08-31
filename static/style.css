@@ -48,7 +48,7 @@ html, body {
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
-  background: #e4e4e9;
+  background: var(--bg);
   color: var(--ink);
   display: flex;
   flex-direction: column;
@@ -69,10 +69,6 @@ body {
   justify-content: space-between;
   flex-shrink: 0;
   z-index: 20;
-  width: 100%;
-  max-width: 480px;
-  margin: 0 auto;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.04), 0 2px 12px rgba(0, 0, 0, 0.06);
 }
 
 .topbar-left {
@@ -135,9 +131,6 @@ body {
   -webkit-overflow-scrolling: touch;
   padding: 12px;
   padding-bottom: calc(12px + var(--tabbar-height) + var(--safe-bottom));
-  width: 100%;
-  max-width: 480px;
-  margin: 0 auto;
 }
 
 .screen {
@@ -631,17 +624,14 @@ body {
 .tabbar {
   position: fixed;
   bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  max-width: 480px;
+  left: 0;
+  right: 0;
   height: calc(var(--tabbar-height) + var(--safe-bottom));
   padding-bottom: var(--safe-bottom);
   background: var(--card);
   border-top: 0.5px solid var(--separator);
   display: flex;
   z-index: 30;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.04), 0 -2px 12px rgba(0, 0, 0, 0.06);
 }
 
 .tab-btn {
