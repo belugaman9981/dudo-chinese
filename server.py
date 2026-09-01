@@ -9,7 +9,7 @@ FastAPI backend that:
   5. Computes contrast colors for the pinyin overlay
 
 Run with:
-    python server.py
+    python server.py 
 Then open http://localhost:8000 (or http://<your-ip>:8000 on your iPad).
 """
 
