@@ -22,6 +22,7 @@
   const captureBtn = $("capture-btn");
   const fileInput = $("file-input");
   const cameraStatus = $("camera-status");
+  const cameraCloseBtn = $("camera-close-btn");
 
   const langSelect = $("lang-select");
   const processingStatus = $("processing-status");
@@ -106,6 +107,7 @@
     en: {
       appTitle: "Xinhua Dictionary", langLabel: "Language",
       overlayHint: "Align text within the frame",
+      cameraPanelTitle: "Scan a page", cameraCloseBtn: "Done",
       captureBtn: "Capture", uploadBtn: "Upload Photo",
       processingTitle: "Recognizing…", processingStatus: "Reading text",
       searchPlaceholder: "Type pinyin, e.g. nihao or ni3hao3",
@@ -145,6 +147,7 @@
     zh: {
       appTitle: "新华字典", langLabel: "语言",
       overlayHint: "将文字对准取景框",
+      cameraPanelTitle: "拍照识别", cameraCloseBtn: "完成",
       captureBtn: "拍照", uploadBtn: "上传图片",
       processingTitle: "识别中…", processingStatus: "正在读取文字",
       searchPlaceholder: "输入拼音，如 nihao 或 ni3hao3",
@@ -184,6 +187,7 @@
     es: {
       appTitle: "Diccionario Xinhua", langLabel: "Idioma",
       overlayHint: "Alinea el texto dentro del marco",
+      cameraPanelTitle: "Escanear una página", cameraCloseBtn: "Listo",
       captureBtn: "Capturar", uploadBtn: "Subir foto",
       processingTitle: "Reconociendo…", processingStatus: "Leyendo texto",
       searchPlaceholder: "Escribe el pinyin, p. ej. nihao o ni3hao3",
@@ -252,17 +256,28 @@
 
   // ---------- Screen switching ----------
   function showScreen(screen) {
-    [captureScreen, processingScreen, resultScreen, searchScreen, dictScreen, settingsScreen].forEach(
+    [processingScreen, resultScreen, searchScreen, dictScreen, settingsScreen].forEach(
       (s) => s.classList.remove("active")
     );
     screen.classList.add("active");
 
     // Update bottom tab bar
-    if (screen === captureScreen) setActiveTab("camera");
-    else if (screen === resultScreen) setActiveTab("results");
+    if (screen === resultScreen) setActiveTab("results");
     else if (screen === searchScreen) setActiveTab("search");
     else if (screen === dictScreen) setActiveTab("dict");
     else if (screen === settingsScreen) setActiveTab("settings");
+  }
+
+  // ---------- Camera panel (slides out from the bottom) ----------
+  function openCamera() {
+    captureScreen.classList.add("active");
+    setActiveTab("camera");
+    if (!stream) startCamera();
+  }
+
+  function closeCamera() {
+    captureScreen.classList.remove("active");
+    stopCamera();
   }
 
   function setActiveTab(tabName) {
@@ -391,7 +406,7 @@
       }
       if (!data.items || data.items.length === 0) {
         toast(data.message || t("noCharsDetected"));
-        showScreen(captureScreen);
+        closeCamera();
         return;
       }
       currentItems = data.items;
@@ -399,7 +414,7 @@
     } catch (err) {
       console.error(err);
       toast(t("processingFailed", { msg: err.message }));
-      showScreen(captureScreen);
+      closeCamera();
     }
   }
 
@@ -780,6 +795,8 @@
     if (dataUrl) processImage(dataUrl);
   });
 
+  cameraCloseBtn.addEventListener("click", closeCamera);
+
   fileInput.addEventListener("change", (e) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
@@ -790,8 +807,7 @@
   });
 
   backBtn.addEventListener("click", () => {
-    showScreen(captureScreen);
-    startCamera();
+    openCamera();
   });
 
   togglePinyinBtn.addEventListener("click", () => {
@@ -818,8 +834,7 @@
     btn.addEventListener("click", () => {
       const tab = btn.dataset.tab;
       if (tab === "camera") {
-        showScreen(captureScreen);
-        startCamera();
+        openCamera();
       } else if (tab === "results") {
         if (currentImage) {
           showScreen(resultScreen);
@@ -907,7 +922,10 @@
     uiLang = langSelect.value;
     applyTranslations();
   });
-  startCamera();
+  // Open the dictionary by default at launch; the camera is available via
+  // the Camera tab when the user needs to scan a page.
+  showScreen(dictScreen);
+  dictSearchInput.focus();
 
   window.addEventListener("beforeunload", stopCamera);
   document.addEventListener("visibilitychange", () => {

@@ -24,8 +24,13 @@
   <!-- Main content area -->
   <main class="content">
 
-    <!-- Camera / Capture screen -->
-    <section id="capture-screen" class="screen active">
+    <!-- Camera / Capture panel (slides out from the bottom when needed) -->
+    <section id="capture-screen" class="screen camera-panel">
+      <div class="camera-panel-handle"></div>
+      <div class="camera-panel-header">
+        <span class="camera-panel-title" data-i18n="cameraPanelTitle">拍照识别</span>
+        <button id="camera-close-btn" class="btn btn-small" data-i18n="cameraCloseBtn">完成</button>
+      </div>
       <div class="capture-card">
         <div class="camera-wrap">
           <video id="camera" autoplay playsinline muted></video>
