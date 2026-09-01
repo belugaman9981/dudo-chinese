@@ -4,7 +4,7 @@
 FastAPI backend that:
   1. Receives a photo of a page with Chinese characters
   2. Runs OCR to extract characters with bounding boxes
-  3. Adds pinyin annotations 
+  3. Adds pinyin annotations
   4. Provides word definitions in multiple languages
   5. Computes contrast colors for the pinyin overlay
 
