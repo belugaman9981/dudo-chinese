@@ -589,6 +589,62 @@ def pinyin_search(q: str = "", lang: str = "en", limit: int = 30):
     return {"results": results}
 
 
+@app.get("/api/dict_lookup")
+def dict_lookup(q: str = "", lang: str = "en", limit: int = 30):
+    """Look up a Chinese character or word directly in the dictionary.
+
+    - A single character returns entries that contain that character
+      (via the character index), so typing 手 shows 手, 手机, 手表, etc.
+    - A multi-character word returns exact matches first, then entries
+      that start with the query, then entries containing it.
+    """
+    if not q or not _dict:
+        return {"results": []}
+    q = q.strip()
+    if not q:
+        return {"results": []}
+
+    results = []
+    seen = set()
+
+    def add(entries):
+        for e in entries:
+            sig = (e["simplified"], e["pinyin"])
+            if sig not in seen:
+                seen.add(sig)
+                results.append(e)
+
+    if len(q) == 1:
+        add(_dict.lookup_char(q, max_results=limit))
+    else:
+        # Exact match first
+        add(_dict.lookup(q, max_results=limit))
+        # Then prefix matches
+        for e in _dict._entries:
+            if e["simplified"].startswith(q) or e["traditional"].startswith(q):
+                add([e])
+            if len(results) >= limit:
+                break
+        # Then substring matches
+        if len(results) < limit:
+            for e in _dict._entries:
+                if q in e["simplified"] or q in e["traditional"]:
+                    add([e])
+                if len(results) >= limit:
+                    break
+
+    out = []
+    for e in results[:limit]:
+        defs = [translate_definition(d, lang) for d in e["definitions"][:4]]
+        out.append({
+            "simplified": e["simplified"],
+            "traditional": e["traditional"],
+            "pinyin": numbered_to_tone(e["pinyin"]),
+            "definitions": defs,
+        })
+    return {"results": out}
+
+
 @app.post("/api/ocr")
 async def ocr_endpoint(
     file: UploadFile = File(...),

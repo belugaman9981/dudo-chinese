@@ -145,14 +145,14 @@ body {
    Camera / Capture screen
    ============================================================ */
 .capture-card {
-  max-width: 640px;
+  max-width: 480px;
   margin: 0 auto;
 }
 
 .camera-wrap {
   position: relative;
   width: 100%;
-  aspect-ratio: 3 / 4;
+  aspect-ratio: 4 / 3;
   background: #000;
   border-radius: var(--radius);
   overflow: hidden;

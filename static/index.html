@@ -82,6 +82,27 @@
       <div id="search-results" class="word-list"></div>
     </section>
 
+    <!-- Dictionary screen (look up a character/word directly) -->
+    <section id="dict-screen" class="screen">
+      <div class="search-bar-wrap">
+        <input
+          id="dict-search-input"
+          class="pinyin-search-input"
+          type="text"
+          inputmode="text"
+          autocapitalize="none"
+          autocorrect="off"
+          spellcheck="false"
+          data-i18n-placeholder="dictPlaceholder"
+          placeholder="输入汉字，如 手机"
+        />
+      </div>
+      <div id="dict-hint" class="search-hint" data-i18n="dictHint">
+        输入一个汉字或词语，例如 "手" 或 "手机"，查看释义。
+      </div>
+      <div id="dict-results" class="word-list"></div>
+    </section>
+
     <!-- Result screen -->
     <section id="result-screen" class="screen">
       <!-- Segmented control (Pleco-style) -->
@@ -165,8 +186,12 @@
       <span class="tab-icon">🔎</span>
       <span class="tab-label" data-i18n="tabSearch">拼音查找</span>
     </button>
-    <button class="tab-btn" data-tab="results" id="results-tab-btn">
+    <button class="tab-btn" data-tab="dict" id="dict-tab-btn">
       <span class="tab-icon">📖</span>
+      <span class="tab-label" data-i18n="tabDict">字典</span>
+    </button>
+    <button class="tab-btn" data-tab="results" id="results-tab-btn">
+      <span class="tab-icon">📄</span>
       <span class="tab-label" data-i18n="tabResults">结果</span>
     </button>
     <button class="tab-btn" data-tab="settings">

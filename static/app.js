@@ -14,6 +14,7 @@
   const processingScreen = $("processing-screen");
   const resultScreen = $("result-screen");
   const searchScreen = $("search-screen");
+  const dictScreen = $("dict-screen");
   const settingsScreen = $("settings-screen");
 
   const video = $("camera");
@@ -47,6 +48,11 @@
   const pinyinSearchInput = $("pinyin-search-input");
   const searchResults = $("search-results");
   const searchHint = $("search-hint");
+
+  // Dictionary lookup
+  const dictSearchInput = $("dict-search-input");
+  const dictResults = $("dict-results");
+  const dictHint = $("dict-hint");
 
   // Settings
   const settingShowPinyinToggle = $("setting-show-pinyin");
@@ -104,10 +110,13 @@
       processingTitle: "Recognizing…", processingStatus: "Reading text",
       searchPlaceholder: "Type pinyin, e.g. nihao or ni3hao3",
       searchHint: "Don't know how to write it? Type the pinyin (tones optional), e.g. \"shouji\" to find 手机, 手迹, 手记…",
+      dictPlaceholder: "Type a character or word, e.g. 手机",
+      dictHint: "Type a Chinese character or word, e.g. \"手\" or \"手机\", to see its definition.",
+      noDictMatch: "No matching entries — try a single character or a full word.",
       segPage: "Page", segWords: "Words",
       backBtn: "← New Photo", hidePinyinBtn: "Hide Pinyin", showPinyinBtn: "Show Pinyin",
       showDefsBtn: "Show Definitions", hideDefsBtn: "Hide Definitions",
-      tabCamera: "Camera", tabSearch: "Pinyin Search", tabResults: "Results", tabSettings: "Settings",
+      tabCamera: "Camera", tabSearch: "Pinyin Search", tabDict: "Dictionary", tabResults: "Results", tabSettings: "Settings",
       cameraNotSupported: "This browser doesn't support the camera. Please use the upload button instead.",
       cameraReady: "Camera ready — tap capture to scan.",
       cameraError: "Couldn't access the camera: {msg}. You can still upload a photo.",
@@ -140,10 +149,13 @@
       processingTitle: "识别中…", processingStatus: "正在读取文字",
       searchPlaceholder: "输入拼音，如 nihao 或 ni3hao3",
       searchHint: "不知道怎么写？输入拼音（可以不带声调），例如输入 \"shouji\" 查找 手机、手迹、手记…",
+      dictPlaceholder: "输入汉字，如 手机",
+      dictHint: "输入一个汉字或词语，例如 \"手\" 或 \"手机\"，查看释义。",
+      noDictMatch: "没有找到匹配的词 — 试试输入单个汉字或完整词语。",
       segPage: "页面", segWords: "词汇",
       backBtn: "← 新照片", hidePinyinBtn: "隐藏拼音", showPinyinBtn: "显示拼音",
       showDefsBtn: "显示释义", hideDefsBtn: "隐藏释义",
-      tabCamera: "相机", tabSearch: "拼音查找", tabResults: "结果", tabSettings: "设置",
+      tabCamera: "相机", tabSearch: "拼音查找", tabDict: "字典", tabResults: "结果", tabSettings: "设置",
       cameraNotSupported: "此浏览器不支持相机。请使用上传图片功能。",
       cameraReady: "相机已就绪 — 拍照识别。",
       cameraError: "无法访问相机：{msg}。您仍然可以上传图片。",
@@ -176,10 +188,13 @@
       processingTitle: "Reconociendo…", processingStatus: "Leyendo texto",
       searchPlaceholder: "Escribe el pinyin, p. ej. nihao o ni3hao3",
       searchHint: "¿No sabes escribirlo? Escribe el pinyin (tonos opcionales), p. ej. \"shouji\" para encontrar 手机, 手迹, 手记…",
+      dictPlaceholder: "Escribe un carácter o palabra, p. ej. 手机",
+      dictHint: "Escribe un carácter o palabra chinos, p. ej. \"手\" o \"手机\", para ver su definición.",
+      noDictMatch: "No se encontraron entradas — prueba con un solo carácter o una palabra completa.",
       segPage: "Página", segWords: "Palabras",
       backBtn: "← Nueva foto", hidePinyinBtn: "Ocultar pinyin", showPinyinBtn: "Mostrar pinyin",
       showDefsBtn: "Mostrar definiciones", hideDefsBtn: "Ocultar definiciones",
-      tabCamera: "Cámara", tabSearch: "Buscar pinyin", tabResults: "Resultados", tabSettings: "Ajustes",
+      tabCamera: "Cámara", tabSearch: "Buscar pinyin", tabDict: "Diccionario", tabResults: "Resultados", tabSettings: "Ajustes",
       cameraNotSupported: "Este navegador no admite la cámara. Usa el botón de subir foto.",
       cameraReady: "Cámara lista — toca capturar para escanear.",
       cameraError: "No se pudo acceder a la cámara: {msg}. Aún puedes subir una foto.",
@@ -237,7 +252,7 @@
 
   // ---------- Screen switching ----------
   function showScreen(screen) {
-    [captureScreen, processingScreen, resultScreen, searchScreen, settingsScreen].forEach(
+    [captureScreen, processingScreen, resultScreen, searchScreen, dictScreen, settingsScreen].forEach(
       (s) => s.classList.remove("active")
     );
     screen.classList.add("active");
@@ -246,6 +261,7 @@
     if (screen === captureScreen) setActiveTab("camera");
     else if (screen === resultScreen) setActiveTab("results");
     else if (screen === searchScreen) setActiveTab("search");
+    else if (screen === dictScreen) setActiveTab("dict");
     else if (screen === settingsScreen) setActiveTab("settings");
   }
 
@@ -710,6 +726,54 @@
     searchDebounceTimer = setTimeout(() => runPinyinSearch(query), 200);
   });
 
+  // ---------- Dictionary lookup (type a character/word directly) ----------
+  let dictDebounceTimer = null;
+  let dictAbortController = null;
+
+  async function runDictLookup(query) {
+    if (dictAbortController) dictAbortController.abort();
+    if (!query.trim()) {
+      dictResults.innerHTML = "";
+      dictHint.style.display = "";
+      return;
+    }
+    dictHint.style.display = "none";
+    dictAbortController = new AbortController();
+    try {
+      const params = new URLSearchParams({
+        q: query,
+        lang: langSelect.value,
+        limit: "30",
+      });
+      const res = await fetch(`/api/dict_lookup?${params.toString()}`, {
+        signal: dictAbortController.signal,
+      });
+      const data = await res.json();
+      renderDictResults(data.results || []);
+    } catch (err) {
+      if (err.name !== "AbortError") {
+        console.error("Dictionary lookup failed", err);
+      }
+    }
+  }
+
+  function renderDictResults(results) {
+    dictResults.innerHTML = "";
+    if (results.length === 0) {
+      dictResults.innerHTML = `<p class="no-def">${t("noDictMatch")}</p>`;
+      return;
+    }
+    results.forEach((entry) => {
+      dictResults.appendChild(createSearchResultCard(entry));
+    });
+  }
+
+  dictSearchInput.addEventListener("input", () => {
+    const query = dictSearchInput.value;
+    clearTimeout(dictDebounceTimer);
+    dictDebounceTimer = setTimeout(() => runDictLookup(query), 200);
+  });
+
   // ---------- Event wiring ----------
   captureBtn.addEventListener("click", () => {
     const dataUrl = captureFrame();
@@ -769,6 +833,12 @@
         if (pinyinSearchInput.value.trim()) {
           runPinyinSearch(pinyinSearchInput.value);
         }
+      } else if (tab === "dict") {
+        showScreen(dictScreen);
+        dictSearchInput.focus();
+        if (dictSearchInput.value.trim()) {
+          runDictLookup(dictSearchInput.value);
+        }
       } else if (tab === "settings") {
         showScreen(settingsScreen);
       }
@@ -826,6 +896,9 @@
     }
     if (pinyinSearchInput.value.trim() && searchScreen.classList.contains("active")) {
       runPinyinSearch(pinyinSearchInput.value);
+    }
+    if (dictSearchInput.value.trim() && dictScreen.classList.contains("active")) {
+      runDictLookup(dictSearchInput.value);
     }
   });
 
