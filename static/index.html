@@ -16,8 +16,7 @@
       <span class="app-title" data-i18n="appTitle">新华字典</span>
     </div>
     <div class="topbar-right">
-      <label class="lang-label" for="lang-select" data-i18n="langLabel">语言</label>
-      <select id="lang-select" class="lang-select"></select>
+      <select id="lang-select" class="lang-select" aria-label="Language"></select>
     </div>
   </header>
 
@@ -66,45 +65,47 @@
       </div>
     </section>
 
-    <!-- Pinyin search screen (Pleco-style "search by pinyin") -->
-    <section id="search-screen" class="screen">
-      <div class="search-bar-wrap">
-        <input
-          id="pinyin-search-input"
-          class="pinyin-search-input"
-          type="text"
-          inputmode="text"
-          autocapitalize="none"
-          autocorrect="off"
-          spellcheck="false"
-          data-i18n-placeholder="searchPlaceholder"
-          placeholder="输入拼音，如 nihao 或 ni3hao3"
-        />
-      </div>
-      <div id="search-hint" class="search-hint" data-i18n="searchHint">
-        不知道怎么写？输入拼音（可以不带声调），例如输入 "shouji" 查找 手机、手迹、手记…
-      </div>
-      <div id="search-results" class="word-list"></div>
-    </section>
-
-    <!-- Dictionary screen (look up a character/word directly) -->
+    <!-- Dictionary screen: one search box, Pleco-style — type pinyin or
+         hanzi and it auto-detects which lookup to run. -->
     <section id="dict-screen" class="screen">
       <div class="search-bar-wrap">
-        <input
-          id="dict-search-input"
-          class="pinyin-search-input"
-          type="text"
-          inputmode="text"
-          autocapitalize="none"
-          autocorrect="off"
-          spellcheck="false"
-          data-i18n-placeholder="dictPlaceholder"
-          placeholder="输入汉字，如 手机"
-        />
+        <div class="search-input-row">
+          <span class="search-icon" aria-hidden="true">⌕</span>
+          <input
+            id="dict-search-input"
+            class="pinyin-search-input"
+            type="text"
+            inputmode="text"
+            autocapitalize="none"
+            autocorrect="off"
+            spellcheck="false"
+            data-i18n-placeholder="searchPlaceholder"
+            placeholder="拼音或汉字，如 nihao / 你好"
+          />
+          <span id="search-mode-badge" class="mode-badge" hidden></span>
+          <button id="dict-clear-btn" class="clear-btn" aria-label="Clear" hidden>&times;</button>
+        </div>
       </div>
-      <div id="dict-hint" class="search-hint" data-i18n="dictHint">
-        输入一个汉字或词语，例如 "手" 或 "手机"，查看释义。
+
+      <!-- Shown when the search box is empty: saved words + recent lookups -->
+      <div id="dict-idle" class="idle-panel">
+        <div id="saved-section" class="idle-section" hidden>
+          <h3 class="idle-heading" data-i18n="savedHeading">收藏</h3>
+          <div id="saved-list" class="word-list"></div>
+        </div>
+        <div id="history-section" class="idle-section" hidden>
+          <div class="idle-heading-row">
+            <h3 class="idle-heading" data-i18n="historyHeading">最近查找</h3>
+            <button id="clear-history-btn" class="link-btn" data-i18n="clearHistory">清除</button>
+          </div>
+          <div id="history-list" class="history-list"></div>
+        </div>
+        <div id="dict-empty-hint" class="empty-state">
+          <div class="empty-icon">📖</div>
+          <p data-i18n="dictHint">输入拼音或汉字，例如 "nihao" 或 "你好"。</p>
+        </div>
       </div>
+
       <div id="dict-results" class="word-list"></div>
     </section>
 
@@ -127,13 +128,13 @@
         <div id="result-container" class="result-container">
           <!-- The annotated image is rendered here -->
         </div>
+        <p class="page-hint" data-i18n="pageTapHint">点击文字块查看词义</p>
       </div>
 
       <!-- Words view: dictionary-style list -->
       <div id="words-view" class="view">
         <div class="words-toolbar">
           <span class="words-count" id="words-count"></span>
-          <button id="toggle-defs-btn" class="btn btn-small" data-i18n="showDefsBtn">显示释义</button>
         </div>
         <div id="word-list" class="word-list"></div>
       </div>
@@ -150,7 +151,7 @@
           </button>
         </div>
         <div class="settings-row">
-          <span class="settings-row-label" data-i18n="settingShowDefs">默认显示释义</span>
+          <span class="settings-row-label" data-i18n="settingShowDefs">默认展开释义</span>
           <button id="setting-show-defs" class="toggle-switch" role="switch" aria-checked="false">
             <span class="toggle-knob"></span>
           </button>
@@ -165,6 +166,18 @@
             <option value="environment" data-i18n="cameraBack">后置</option>
             <option value="user" data-i18n="cameraFront">前置</option>
           </select>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <h3 class="settings-heading" data-i18n="settingsSavedHeading">收藏</h3>
+        <div class="settings-row settings-row-static">
+          <span class="settings-row-label" data-i18n="settingSavedCount">已收藏的词</span>
+          <span class="settings-row-value" id="saved-count-value">0</span>
+        </div>
+        <div class="settings-row">
+          <span class="settings-row-label" data-i18n="settingClearSaved">清除全部收藏</span>
+          <button id="clear-saved-btn" class="btn btn-small btn-danger" data-i18n="clearBtn">清除</button>
         </div>
       </div>
 
@@ -187,13 +200,9 @@
       <span class="tab-icon">📷</span>
       <span class="tab-label" data-i18n="tabCamera">相机</span>
     </button>
-    <button class="tab-btn" data-tab="search" id="search-tab-btn">
-      <span class="tab-icon">🔎</span>
-      <span class="tab-label" data-i18n="tabSearch">拼音查找</span>
-    </button>
     <button class="tab-btn" data-tab="dict" id="dict-tab-btn">
       <span class="tab-icon">📖</span>
-      <span class="tab-label" data-i18n="tabDict">字典</span>
+      <span class="tab-label" data-i18n="tabDict">词典</span>
     </button>
     <button class="tab-btn" data-tab="results" id="results-tab-btn">
       <span class="tab-icon">📄</span>

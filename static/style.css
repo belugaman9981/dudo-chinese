@@ -26,6 +26,9 @@
   --tone-4: #1e88e5;          /* 4th tone: blue */
   --tone-5: #757575;          /* neutral: gray */
 
+  --star: #ff9f0a;            /* iOS orange, for saved/starred words */
+  --danger: #ff3b30;
+
   --radius: 12px;
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.1);
@@ -455,37 +458,88 @@ body {
   gap: 8px;
 }
 
-/* Pleco-style word entry card */
+/* Pleco-style word entry card — tap to expand/collapse its definitions */
 .word-item {
   background: var(--card);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  padding: 14px 16px;
+  padding: 12px 14px;
   border-left: 3px solid transparent;
-  transition: border-color 0.15s ease;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.word-item:active {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
 .word-item.selected {
   border-left-color: var(--accent);
 }
 
+.word-item.expanded {
+  border-left-color: var(--accent-light);
+}
+
 .word-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.word-headline {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: baseline;
   gap: 12px;
   flex-wrap: wrap;
 }
 
+/* Star / save toggle */
+.star-btn {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--separator);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 50%;
+  padding: 0;
+  transition: transform 0.1s ease;
+}
+
+.star-btn:active {
+  transform: scale(0.85);
+}
+
+.star-btn.saved {
+  color: var(--star);
+}
+
 .word-char {
-  font-size: 1.7rem;
+  font-size: 1.55rem;
   font-weight: 700;
-  line-height: 1.2;
-  font-family: "PingFang SC", "Microsoft YaHei", "Songti SC", serif;
+  line-height: 1.25;
+  font-family: "Songti SC", "PingFang SC", "STSong", "Microsoft YaHei", serif;
+}
+
+.word-char .variant {
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 1.05rem;
+  margin-left: 2px;
 }
 
 /* Tone-colored pinyin syllables */
 .word-pinyin {
-  font-size: 1.05rem;
+  font-size: 1rem;
   font-weight: 600;
   display: flex;
   gap: 2px;
@@ -503,20 +557,50 @@ body {
 .py-tone-4 { color: var(--tone-4); }
 .py-tone-5 { color: var(--tone-5); }
 
-.word-defs {
-  margin-top: 8px;
-  color: var(--ink);
-  font-size: 0.92rem;
-  line-height: 1.5;
+/* Chevron that rotates open when the card is expanded */
+.expand-chevron {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 0.75rem;
+  transition: transform 0.18s ease;
 }
 
-.word-defs ul {
+.word-item.expanded .expand-chevron {
+  transform: rotate(180deg);
+  color: var(--accent);
+}
+
+.word-defs {
+  display: none;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 0.5px solid var(--separator);
+  color: var(--ink);
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.word-item.expanded .word-defs {
+  display: block;
+}
+
+.word-defs ol {
   margin: 0;
-  padding-left: 18px;
+  padding-left: 20px;
 }
 
 .word-defs li {
-  margin-bottom: 3px;
+  margin-bottom: 4px;
+}
+
+.word-defs li::marker {
+  color: var(--muted);
+  font-weight: 600;
 }
 
 .no-def {
@@ -535,10 +619,24 @@ body {
   z-index: 5;
 }
 
+.search-input-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 14px;
+  color: var(--muted);
+  font-size: 1.05rem;
+  pointer-events: none;
+}
+
 .pinyin-search-input {
   width: 100%;
   font-size: 1.05rem;
-  padding: 12px 14px;
+  padding: 12px 40px 12px 38px;
   border-radius: var(--radius);
   border: 1px solid var(--separator);
   background: var(--card);
@@ -549,6 +647,36 @@ body {
 
 .pinyin-search-input:focus {
   border-color: var(--accent);
+}
+
+.mode-badge {
+  position: absolute;
+  right: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-light);
+  padding: 3px 8px;
+  border-radius: 20px;
+  pointer-events: none;
+}
+
+.clear-btn {
+  position: absolute;
+  right: 10px;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  background: var(--separator);
+  color: var(--card);
+  font-size: 0.95rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
 }
 
 .search-hint {
@@ -563,6 +691,108 @@ body {
   color: var(--muted);
   font-size: 0.9rem;
   margin-left: 6px;
+}
+
+/* ============================================================
+   Dictionary idle state: saved words + recent lookups
+   ============================================================ */
+.idle-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.idle-heading {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 8px 2px;
+}
+
+.idle-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.idle-heading-row .idle-heading {
+  margin-bottom: 8px;
+}
+
+.link-btn {
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 0;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border: none;
+  background: var(--card);
+  color: var(--ink);
+  font-size: 0.95rem;
+  text-align: left;
+  cursor: pointer;
+  border-top: 0.5px solid var(--separator);
+}
+
+.history-list .history-item:first-child {
+  border-top: none;
+}
+
+.history-item-icon {
+  color: var(--muted);
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 32px 16px;
+  color: var(--muted);
+}
+
+.empty-icon {
+  font-size: 2.2rem;
+  margin-bottom: 10px;
+  opacity: 0.7;
+}
+
+.empty-state p {
+  font-size: 0.88rem;
+  line-height: 1.5;
+  margin: 0 auto;
+  max-width: 320px;
+}
+
+.page-hint {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.78rem;
+  margin: 10px 0 0;
+}
+
+.btn-danger {
+  color: var(--danger);
+  border-color: var(--danger);
 }
 
 /* ============================================================

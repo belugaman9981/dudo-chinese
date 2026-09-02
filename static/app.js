@@ -13,7 +13,6 @@
   const captureScreen = $("capture-screen");
   const processingScreen = $("processing-screen");
   const resultScreen = $("result-screen");
-  const searchScreen = $("search-screen");
   const dictScreen = $("dict-screen");
   const settingsScreen = $("settings-screen");
 
@@ -32,7 +31,6 @@
   const wordsCount = $("words-count");
   const backBtn = $("back-btn");
   const togglePinyinBtn = $("toggle-pinyin-btn");
-  const toggleDefsBtn = $("toggle-defs-btn");
 
   // Segmented control
   const tabPageBtn = $("tab-page-btn");
@@ -43,28 +41,32 @@
   // Bottom tab bar
   const tabButtons = document.querySelectorAll(".tab-btn");
   const resultsTabBtn = $("results-tab-btn");
-  const searchTabBtn = $("search-tab-btn");
 
-  // Pinyin search
-  const pinyinSearchInput = $("pinyin-search-input");
-  const searchResults = $("search-results");
-  const searchHint = $("search-hint");
-
-  // Dictionary lookup
+  // Unified dictionary search (Pleco-style: one box, pinyin or hanzi)
   const dictSearchInput = $("dict-search-input");
   const dictResults = $("dict-results");
-  const dictHint = $("dict-hint");
+  const dictClearBtn = $("dict-clear-btn");
+  const searchModeBadge = $("search-mode-badge");
+  const dictIdle = $("dict-idle");
+  const savedSection = $("saved-section");
+  const savedList = $("saved-list");
+  const historySection = $("history-section");
+  const historyList = $("history-list");
+  const clearHistoryBtn = $("clear-history-btn");
+  const dictEmptyHint = $("dict-empty-hint");
 
   // Settings
   const settingShowPinyinToggle = $("setting-show-pinyin");
   const settingShowDefsToggle = $("setting-show-defs");
   const settingCameraFacingSelect = $("setting-camera-facing");
+  const savedCountValue = $("saved-count-value");
+  const clearSavedBtn = $("clear-saved-btn");
 
   // ---------- Settings persistence ----------
   const SETTINGS_KEY = "xinhua-photo-pinyin-settings";
   const DEFAULT_SETTINGS = {
     showPinyinDefault: true,
-    showDefsDefault: false,
+    showDefsDefault: false, // now means: cards start expanded by default
     cameraFacing: "environment",
   };
 
@@ -89,13 +91,88 @@
 
   const settings = loadSettings();
 
+  // ---------- Saved words (star / favorite) ----------
+  const SAVED_KEY = "xinhua-photo-pinyin-saved";
+  const HISTORY_KEY = "xinhua-photo-pinyin-history";
+  const HISTORY_LIMIT = 12;
+
+  function loadSaved() {
+    try {
+      const raw = localStorage.getItem(SAVED_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function persistSaved() {
+    try {
+      localStorage.setItem(SAVED_KEY, JSON.stringify(savedWords));
+    } catch (e) {
+      console.warn("Failed to save favorites", e);
+    }
+  }
+
+  function entryKey(entry) {
+    return `${entry.simplified || entry.word}|${entry.pinyin}`;
+  }
+
+  function isSaved(entry) {
+    return savedWords.some((w) => entryKey(w) === entryKey(entry));
+  }
+
+  function toggleSavedEntry(entry) {
+    const key = entryKey(entry);
+    const idx = savedWords.findIndex((w) => entryKey(w) === key);
+    if (idx >= 0) {
+      savedWords.splice(idx, 1);
+    } else {
+      savedWords.unshift({
+        simplified: entry.simplified || entry.word,
+        traditional: entry.traditional || "",
+        pinyin: entry.pinyin,
+        definitions: entry.definitions || [],
+      });
+    }
+    persistSaved();
+    return idx < 0; // true if now saved
+  }
+
+  function loadHistory() {
+    try {
+      const raw = localStorage.getItem(HISTORY_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function persistHistory() {
+    try {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(searchHistory));
+    } catch (e) {
+      console.warn("Failed to save history", e);
+    }
+  }
+
+  function pushHistory(query) {
+    const q = query.trim();
+    if (!q) return;
+    searchHistory = searchHistory.filter((item) => item !== q);
+    searchHistory.unshift(q);
+    if (searchHistory.length > HISTORY_LIMIT) searchHistory.length = HISTORY_LIMIT;
+    persistHistory();
+  }
+
+  const savedWords = loadSaved();
+  let searchHistory = loadHistory();
+
   // ---------- State ----------
   let stream = null;
   let currentImage = null;
   let currentImageDataUrl = null;
   let currentItems = [];
   let showPinyin = settings.showPinyinDefault;
-  let showDefs = settings.showDefsDefault;
   let annotationCanvas = null;
   let selectedItem = null;
   let uiLang = "en";
@@ -110,15 +187,21 @@
       cameraPanelTitle: "Scan a page", cameraCloseBtn: "Done",
       captureBtn: "Capture", uploadBtn: "Upload Photo",
       processingTitle: "Recognizing…", processingStatus: "Reading text",
-      searchPlaceholder: "Type pinyin, e.g. nihao or ni3hao3",
+      searchPlaceholder: "Pinyin or hanzi, e.g. nihao / 你好",
       searchHint: "Don't know how to write it? Type the pinyin (tones optional), e.g. \"shouji\" to find 手机, 手迹, 手记…",
       dictPlaceholder: "Type a character or word, e.g. 手机",
-      dictHint: "Type a Chinese character or word, e.g. \"手\" or \"手机\", to see its definition.",
-      noDictMatch: "No matching entries — try a single character or a full word.",
+      dictHint: "Type pinyin or a Chinese character/word — e.g. \"nihao\" or \"你好\" — to look it up.",
+      noDictMatch: "No matches — try pinyin without tones, or a single character.",
       segPage: "Page", segWords: "Words",
       backBtn: "← New Photo", hidePinyinBtn: "Hide Pinyin", showPinyinBtn: "Show Pinyin",
-      showDefsBtn: "Show Definitions", hideDefsBtn: "Hide Definitions",
-      tabCamera: "Camera", tabSearch: "Pinyin Search", tabDict: "Dictionary", tabResults: "Results", tabSettings: "Settings",
+      pageTapHint: "Tap a highlighted block to see its meaning",
+      modePinyin: "Pinyin", modeHanzi: "Hanzi",
+      savedHeading: "Saved", historyHeading: "Recent", clearHistory: "Clear",
+      savedAdded: "Saved", savedRemoved: "Removed from saved",
+      settingsSavedHeading: "Saved words",
+      settingSavedCount: "Saved words", settingClearSaved: "Clear all saved words", clearBtn: "Clear",
+      savedCleared: "Saved words cleared",
+      tabCamera: "Camera", tabDict: "Dictionary", tabResults: "Results", tabSettings: "Settings",
       cameraNotSupported: "This browser doesn't support the camera. Please use the upload button instead.",
       cameraReady: "Camera ready — tap capture to scan.",
       cameraError: "Couldn't access the camera: {msg}. You can still upload a photo.",
@@ -136,7 +219,7 @@
       noResultsYet: "No results yet — take a photo or upload one first.",
       settingsDefaultsHeading: "Defaults",
       settingShowPinyin: "Show pinyin by default",
-      settingShowDefs: "Show definitions by default",
+      settingShowDefs: "Expand definitions by default",
       settingsCameraHeading: "Camera",
       settingCameraFacing: "Default camera",
       cameraBack: "Back", cameraFront: "Front",
@@ -150,15 +233,21 @@
       cameraPanelTitle: "拍照识别", cameraCloseBtn: "完成",
       captureBtn: "拍照", uploadBtn: "上传图片",
       processingTitle: "识别中…", processingStatus: "正在读取文字",
-      searchPlaceholder: "输入拼音，如 nihao 或 ni3hao3",
+      searchPlaceholder: "拼音或汉字，如 nihao / 你好",
       searchHint: "不知道怎么写？输入拼音（可以不带声调），例如输入 \"shouji\" 查找 手机、手迹、手记…",
       dictPlaceholder: "输入汉字，如 手机",
-      dictHint: "输入一个汉字或词语，例如 \"手\" 或 \"手机\"，查看释义。",
-      noDictMatch: "没有找到匹配的词 — 试试输入单个汉字或完整词语。",
+      dictHint: "输入拼音或汉字/词语，例如 \"nihao\" 或 \"你好\"，即可查找。",
+      noDictMatch: "没有找到匹配的词 — 试试不带声调的拼音，或单个汉字。",
       segPage: "页面", segWords: "词汇",
       backBtn: "← 新照片", hidePinyinBtn: "隐藏拼音", showPinyinBtn: "显示拼音",
-      showDefsBtn: "显示释义", hideDefsBtn: "隐藏释义",
-      tabCamera: "相机", tabSearch: "拼音查找", tabDict: "字典", tabResults: "结果", tabSettings: "设置",
+      pageTapHint: "点击高亮的文字块查看词义",
+      modePinyin: "拼音", modeHanzi: "汉字",
+      savedHeading: "收藏", historyHeading: "最近查找", clearHistory: "清除",
+      savedAdded: "已收藏", savedRemoved: "已取消收藏",
+      settingsSavedHeading: "收藏",
+      settingSavedCount: "已收藏的词", settingClearSaved: "清除全部收藏", clearBtn: "清除",
+      savedCleared: "已清除全部收藏",
+      tabCamera: "相机", tabDict: "词典", tabResults: "结果", tabSettings: "设置",
       cameraNotSupported: "此浏览器不支持相机。请使用上传图片功能。",
       cameraReady: "相机已就绪 — 拍照识别。",
       cameraError: "无法访问相机：{msg}。您仍然可以上传图片。",
@@ -176,7 +265,7 @@
       noResultsYet: "还没有结果 — 请先拍照或上传图片。",
       settingsDefaultsHeading: "默认设置",
       settingShowPinyin: "默认显示拼音",
-      settingShowDefs: "默认显示释义",
+      settingShowDefs: "默认展开释义",
       settingsCameraHeading: "相机",
       settingCameraFacing: "默认摄像头",
       cameraBack: "后置", cameraFront: "前置",
@@ -190,15 +279,21 @@
       cameraPanelTitle: "Escanear una página", cameraCloseBtn: "Listo",
       captureBtn: "Capturar", uploadBtn: "Subir foto",
       processingTitle: "Reconociendo…", processingStatus: "Leyendo texto",
-      searchPlaceholder: "Escribe el pinyin, p. ej. nihao o ni3hao3",
+      searchPlaceholder: "Pinyin o hanzi, p. ej. nihao / 你好",
       searchHint: "¿No sabes escribirlo? Escribe el pinyin (tonos opcionales), p. ej. \"shouji\" para encontrar 手机, 手迹, 手记…",
       dictPlaceholder: "Escribe un carácter o palabra, p. ej. 手机",
-      dictHint: "Escribe un carácter o palabra chinos, p. ej. \"手\" o \"手机\", para ver su definición.",
-      noDictMatch: "No se encontraron entradas — prueba con un solo carácter o una palabra completa.",
+      dictHint: "Escribe pinyin o un carácter/palabra en chino — p. ej. \"nihao\" o \"你好\" — para buscarlo.",
+      noDictMatch: "Sin coincidencias — prueba con pinyin sin tonos, o un solo carácter.",
       segPage: "Página", segWords: "Palabras",
       backBtn: "← Nueva foto", hidePinyinBtn: "Ocultar pinyin", showPinyinBtn: "Mostrar pinyin",
-      showDefsBtn: "Mostrar definiciones", hideDefsBtn: "Ocultar definiciones",
-      tabCamera: "Cámara", tabSearch: "Buscar pinyin", tabDict: "Diccionario", tabResults: "Resultados", tabSettings: "Ajustes",
+      pageTapHint: "Toca un bloque resaltado para ver su significado",
+      modePinyin: "Pinyin", modeHanzi: "Hanzi",
+      savedHeading: "Guardado", historyHeading: "Recientes", clearHistory: "Borrar",
+      savedAdded: "Guardado", savedRemoved: "Eliminado de guardados",
+      settingsSavedHeading: "Palabras guardadas",
+      settingSavedCount: "Palabras guardadas", settingClearSaved: "Borrar todas las guardadas", clearBtn: "Borrar",
+      savedCleared: "Palabras guardadas borradas",
+      tabCamera: "Cámara", tabDict: "Diccionario", tabResults: "Resultados", tabSettings: "Ajustes",
       cameraNotSupported: "Este navegador no admite la cámara. Usa el botón de subir foto.",
       cameraReady: "Cámara lista — toca capturar para escanear.",
       cameraError: "No se pudo acceder a la cámara: {msg}. Aún puedes subir una foto.",
@@ -216,7 +311,7 @@
       noResultsYet: "Aún no hay resultados — toma o sube una foto primero.",
       settingsDefaultsHeading: "Valores predeterminados",
       settingShowPinyin: "Mostrar pinyin por defecto",
-      settingShowDefs: "Mostrar definiciones por defecto",
+      settingShowDefs: "Expandir definiciones por defecto",
       settingsCameraHeading: "Cámara",
       settingCameraFacing: "Cámara predeterminada",
       cameraBack: "Trasera", cameraFront: "Frontal",
@@ -251,19 +346,21 @@
     document.title = t("appTitle") + " · Photo Pinyin";
     // Re-apply dynamic toggle-button labels that depend on state.
     togglePinyinBtn.textContent = showPinyin ? t("hidePinyinBtn") : t("showPinyinBtn");
-    toggleDefsBtn.textContent = showDefs ? t("hideDefsBtn") : t("showDefsBtn");
+    if (searchModeBadge && !searchModeBadge.hidden) {
+      searchModeBadge.textContent = searchModeBadge.dataset.mode === "pinyin" ? t("modePinyin") : t("modeHanzi");
+    }
+    renderIdlePanel();
   }
 
   // ---------- Screen switching ----------
   function showScreen(screen) {
-    [processingScreen, resultScreen, searchScreen, dictScreen, settingsScreen].forEach(
+    [processingScreen, resultScreen, dictScreen, settingsScreen].forEach(
       (s) => s.classList.remove("active")
     );
     screen.classList.add("active");
 
     // Update bottom tab bar
     if (screen === resultScreen) setActiveTab("results");
-    else if (screen === searchScreen) setActiveTab("search");
     else if (screen === dictScreen) setActiveTab("dict");
     else if (screen === settingsScreen) setActiveTab("settings");
   }
@@ -570,7 +667,7 @@
     });
   }
 
-  // ---------- Word list rendering ----------
+  // ---------- Word list rendering (OCR page results) ----------
   function buildWordList(onlyItem) {
     // If onlyItem is given, show only that item's words; otherwise show all.
     const items = onlyItem ? [onlyItem] : currentItems;
@@ -588,76 +685,62 @@
       return;
     }
 
-      wordsCount.textContent = t("wordsCount", { n: seen.size });
+    wordsCount.textContent = t("wordsCount", { n: seen.size });
     for (const wd of seen.values()) {
-      wordList.appendChild(createWordCard(wd));
+      wordList.appendChild(createEntryCard(wd));
     }
   }
 
-  function createWordCard(wd) {
+  // ---------- Unified dictionary entry card ----------
+  // Accepts either a search-result entry ({simplified, traditional, pinyin,
+  // definitions}) or an OCR word ({word, pinyin, definitions}) and renders a
+  // single Pleco-style row: star toggle, headword, tone-colored pinyin, and
+  // a chevron that expands to show numbered definitions on tap.
+  function createEntryCard(raw) {
+    const entry = {
+      simplified: raw.simplified || raw.word,
+      traditional: raw.traditional || "",
+      pinyin: raw.pinyin || "",
+      definitions: raw.definitions || [],
+    };
+
     const div = document.createElement("div");
     div.className = "word-item";
+    if (settings.showDefsDefault) div.classList.add("expanded");
 
     const head = document.createElement("div");
     head.className = "word-head";
 
-    const char = document.createElement("span");
-    char.className = "word-char";
-    char.textContent = wd.word;
+    const starBtn = document.createElement("button");
+    starBtn.type = "button";
+    starBtn.className = "star-btn";
+    starBtn.setAttribute("aria-label", t("savedHeading"));
+    const applyStarState = () => {
+      const saved = isSaved(entry);
+      starBtn.classList.toggle("saved", saved);
+      starBtn.textContent = saved ? "★" : "☆";
+    };
+    applyStarState();
+    starBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const nowSaved = toggleSavedEntry(entry);
+      applyStarState();
+      toast(nowSaved ? t("savedAdded") : t("savedRemoved"));
+      renderIdlePanel();
+    });
 
-    const py = document.createElement("span");
-    py.className = "word-pinyin";
-    // Tone-colored syllables
-    const syllables = parsePinyinSyllables(wd.pinyin);
-    if (syllables.length) {
-      syllables.forEach((s) => {
-        const span = document.createElement("span");
-        span.className = `py-syllable py-tone-${s.tone}`;
-        span.textContent = s.text;
-        py.appendChild(span);
-      });
-    } else {
-      py.textContent = wd.pinyin || "";
-    }
-
-    head.appendChild(char);
-    head.appendChild(py);
-    div.appendChild(head);
-
-    const defs = document.createElement("div");
-    defs.className = "word-defs";
-    if (showDefs && wd.definitions && wd.definitions.length) {
-      const ul = document.createElement("ul");
-      wd.definitions.forEach((d) => {
-        const li = document.createElement("li");
-        li.textContent = d;
-        ul.appendChild(li);
-      });
-      defs.appendChild(ul);
-    } else if (showDefs) {
-      defs.innerHTML = `<span class="no-def">${t("noDefFound")}</span>`;
-    }
-    div.appendChild(defs);
-
-    return div;
-  }
-
-  // ---------- Pinyin search (find a word when you don't know how to write it) ----------
-  let searchDebounceTimer = null;
-  let searchAbortController = null;
-
-  function createSearchResultCard(entry) {
-    const div = document.createElement("div");
-    div.className = "word-item";
-
-    const head = document.createElement("div");
-    head.className = "word-head";
+    const headline = document.createElement("div");
+    headline.className = "word-headline";
 
     const char = document.createElement("span");
     char.className = "word-char";
     char.textContent = entry.simplified;
     if (entry.traditional && entry.traditional !== entry.simplified) {
-      char.textContent += ` (${entry.traditional})`;
+      const variant = document.createElement("span");
+      variant.className = "variant";
+      variant.textContent = `(${entry.traditional})`;
+      char.appendChild(document.createTextNode(" "));
+      char.appendChild(variant);
     }
 
     const py = document.createElement("span");
@@ -674,100 +757,89 @@
       py.textContent = entry.pinyin || "";
     }
 
-    head.appendChild(char);
-    head.appendChild(py);
+    headline.appendChild(char);
+    headline.appendChild(py);
+
+    const chevron = document.createElement("span");
+    chevron.className = "expand-chevron";
+    chevron.textContent = "▾";
+
+    head.appendChild(starBtn);
+    head.appendChild(headline);
+    head.appendChild(chevron);
     div.appendChild(head);
 
     const defs = document.createElement("div");
     defs.className = "word-defs";
-    if (entry.definitions && entry.definitions.length) {
-      const ul = document.createElement("ul");
+    if (entry.definitions.length) {
+      const ol = document.createElement("ol");
       entry.definitions.forEach((d) => {
         const li = document.createElement("li");
         li.textContent = d;
-        ul.appendChild(li);
+        ol.appendChild(li);
       });
-      defs.appendChild(ul);
+      defs.appendChild(ol);
     } else {
       defs.innerHTML = `<span class="no-def">${t("noDefFound")}</span>`;
     }
     div.appendChild(defs);
 
+    div.addEventListener("click", () => {
+      div.classList.toggle("expanded");
+    });
+
     return div;
   }
 
-  async function runPinyinSearch(query) {
-    if (searchAbortController) searchAbortController.abort();
-    if (!query.trim()) {
-      searchResults.innerHTML = "";
-      searchHint.style.display = "";
+  // ---------- Unified dictionary search (Pleco-style single box) ----------
+  // Detects whether the query looks like pinyin (Latin letters/digits) or
+  // Chinese characters, and calls the matching endpoint.
+  let searchDebounceTimer = null;
+  let searchAbortController = null;
+
+  function isPinyinQuery(q) {
+    return /^[a-zA-Z0-9\s']+$/.test(q);
+  }
+
+  function updateModeBadge(query) {
+    const trimmed = query.trim();
+    if (!trimmed) {
+      searchModeBadge.hidden = true;
       return;
     }
-    searchHint.style.display = "none";
+    const pinyinMode = isPinyinQuery(trimmed);
+    searchModeBadge.dataset.mode = pinyinMode ? "pinyin" : "hanzi";
+    searchModeBadge.textContent = pinyinMode ? t("modePinyin") : t("modeHanzi");
+    searchModeBadge.hidden = false;
+  }
+
+  async function runDictSearch(query) {
+    if (searchAbortController) searchAbortController.abort();
+    const trimmed = query.trim();
+    dictClearBtn.hidden = !trimmed;
+    updateModeBadge(query);
+
+    if (!trimmed) {
+      dictResults.innerHTML = "";
+      dictIdle.hidden = false;
+      renderIdlePanel();
+      return;
+    }
+    dictIdle.hidden = true;
     searchAbortController = new AbortController();
+    const endpoint = isPinyinQuery(trimmed) ? "/api/pinyin_search" : "/api/dict_lookup";
     try {
-      const params = new URLSearchParams({
-        q: query,
-        lang: langSelect.value,
-        limit: "30",
-      });
-      const res = await fetch(`/api/pinyin_search?${params.toString()}`, {
+      const params = new URLSearchParams({ q: trimmed, lang: langSelect.value, limit: "30" });
+      const res = await fetch(`${endpoint}?${params.toString()}`, {
         signal: searchAbortController.signal,
       });
       const data = await res.json();
-      renderSearchResults(data.results || []);
-    } catch (err) {
-      if (err.name !== "AbortError") {
-        console.error("Pinyin search failed", err);
-      }
-    }
-  }
-
-  function renderSearchResults(results) {
-    searchResults.innerHTML = "";
-    if (results.length === 0) {
-      searchResults.innerHTML =
-        `<p class="no-def">${t("noSearchMatch")}</p>`;
-      return;
-    }
-    results.forEach((entry) => {
-      searchResults.appendChild(createSearchResultCard(entry));
-    });
-  }
-
-  pinyinSearchInput.addEventListener("input", () => {
-    const query = pinyinSearchInput.value;
-    clearTimeout(searchDebounceTimer);
-    searchDebounceTimer = setTimeout(() => runPinyinSearch(query), 200);
-  });
-
-  // ---------- Dictionary lookup (type a character/word directly) ----------
-  let dictDebounceTimer = null;
-  let dictAbortController = null;
-
-  async function runDictLookup(query) {
-    if (dictAbortController) dictAbortController.abort();
-    if (!query.trim()) {
-      dictResults.innerHTML = "";
-      dictHint.style.display = "";
-      return;
-    }
-    dictHint.style.display = "none";
-    dictAbortController = new AbortController();
-    try {
-      const params = new URLSearchParams({
-        q: query,
-        lang: langSelect.value,
-        limit: "30",
-      });
-      const res = await fetch(`/api/dict_lookup?${params.toString()}`, {
-        signal: dictAbortController.signal,
-      });
-      const data = await res.json();
       renderDictResults(data.results || []);
+      pushHistory(trimmed);
+      renderIdlePanel();
     } catch (err) {
       if (err.name !== "AbortError") {
-        console.error("Dictionary lookup failed", err);
+        console.error("Dictionary search failed", err);
       }
     }
   }
@@ -779,14 +851,66 @@
       return;
     }
     results.forEach((entry) => {
-      dictResults.appendChild(createSearchResultCard(entry));
+      dictResults.appendChild(createEntryCard(entry));
     });
   }
 
   dictSearchInput.addEventListener("input", () => {
     const query = dictSearchInput.value;
-    clearTimeout(dictDebounceTimer);
-    dictDebounceTimer = setTimeout(() => runDictLookup(query), 200);
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(() => runDictSearch(query), 200);
+  });
+
+  dictClearBtn.addEventListener("click", () => {
+    dictSearchInput.value = "";
+    dictSearchInput.focus();
+    runDictSearch("");
+  });
+
+  // ---------- Idle panel: saved words + recent lookups ----------
+  function renderIdlePanel() {
+    savedSection.hidden = savedWords.length === 0;
+    savedList.innerHTML = "";
+    savedWords.slice(0, 8).forEach((entry) => {
+      savedList.appendChild(createEntryCard(entry));
+    });
+
+    historySection.hidden = searchHistory.length === 0;
+    historyList.innerHTML = "";
+    searchHistory.forEach((q) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "history-item";
+      const icon = document.createElement("span");
+      icon.className = "history-item-icon";
+      icon.textContent = "🕓";
+      const label = document.createElement("span");
+      label.textContent = q;
+      btn.appendChild(icon);
+      btn.appendChild(label);
+      btn.addEventListener("click", () => {
+        dictSearchInput.value = q;
+        runDictSearch(q);
+      });
+      historyList.appendChild(btn);
+    });
+
+    dictEmptyHint.hidden = savedWords.length > 0 || searchHistory.length > 0;
+
+    if (savedCountValue) savedCountValue.textContent = String(savedWords.length);
+  }
+
+  clearHistoryBtn.addEventListener("click", () => {
+    searchHistory = [];
+    persistHistory();
+    renderIdlePanel();
+  });
+
+  clearSavedBtn.addEventListener("click", () => {
+    savedWords.length = 0;
+    persistSaved();
+    renderIdlePanel();
+    toast(t("savedCleared"));
   });
 
   // ---------- Event wiring ----------
@@ -816,12 +940,6 @@
     if (currentImage) drawAnnotation();
   });
 
-  toggleDefsBtn.addEventListener("click", () => {
-    showDefs = !showDefs;
-    toggleDefsBtn.textContent = showDefs ? t("hideDefsBtn") : t("showDefsBtn");
-    buildWordList();
-  });
-
   // Segmented control
   tabPageBtn.addEventListener("click", showPageView);
   tabWordsBtn.addEventListener("click", () => {
@@ -842,17 +960,13 @@
         } else {
           toast(t("noResultsYet"));
         }
-      } else if (tab === "search") {
-        showScreen(searchScreen);
-        pinyinSearchInput.focus();
-        if (pinyinSearchInput.value.trim()) {
-          runPinyinSearch(pinyinSearchInput.value);
-        }
       } else if (tab === "dict") {
         showScreen(dictScreen);
         dictSearchInput.focus();
         if (dictSearchInput.value.trim()) {
-          runDictLookup(dictSearchInput.value);
+          runDictSearch(dictSearchInput.value);
+        } else {
+          renderIdlePanel();
         }
       } else if (tab === "settings") {
         showScreen(settingsScreen);
@@ -886,9 +1000,8 @@
     settings.showDefsDefault = !settings.showDefsDefault;
     setToggleState(settingShowDefsToggle, settings.showDefsDefault);
     saveSettings();
-    showDefs = settings.showDefsDefault;
-    toggleDefsBtn.textContent = showDefs ? t("hideDefsBtn") : t("showDefsBtn");
     if (currentItems.length) buildWordList();
+    if (dictSearchInput.value.trim()) runDictSearch(dictSearchInput.value);
   });
 
   settingCameraFacingSelect.addEventListener("change", () => {
@@ -909,11 +1022,8 @@
     if (currentImageDataUrl) {
       processImage(currentImageDataUrl);
     }
-    if (pinyinSearchInput.value.trim() && searchScreen.classList.contains("active")) {
-      runPinyinSearch(pinyinSearchInput.value);
-    }
     if (dictSearchInput.value.trim() && dictScreen.classList.contains("active")) {
-      runDictLookup(dictSearchInput.value);
+      runDictSearch(dictSearchInput.value);
     }
   });
 
@@ -925,6 +1035,7 @@
   // Open the dictionary by default at launch; the camera is available via
   // the Camera tab when the user needs to scan a page.
   showScreen(dictScreen);
+  renderIdlePanel();
   dictSearchInput.focus();
 
   window.addEventListener("beforeunload", stopCamera);
