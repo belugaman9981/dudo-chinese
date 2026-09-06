@@ -1,10 +1,10 @@
-fastapi>=0.110
-uvicorn[standard]>=0.29
-python-multipart>=0.0.9
-pypinyin>=0.53
-pillow>=10.0
-numpy>=1.26
-rapidocr_onnxruntime>=1.3
-# Optional but recommended: frequency-aware Chinese word segmentation.
-# Without it, the app falls back to a simpler greedy dictionary matcher.
-jieba>=0.42
+# Tested dependency ranges. Upper bounds reduce surprise breakage from future major releases.
+fastapi>=0.110,<1
+uvicorn[standard]>=0.29,<1
+python-multipart>=0.0.9,<1
+pypinyin>=0.53,<1
+pillow>=10,<13
+numpy>=1.26,<3
+rapidocr_onnxruntime>=1.3,<2
+# Frequency-aware Chinese word segmentation.
+jieba>=0.42,<1

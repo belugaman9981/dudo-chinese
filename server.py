@@ -20,10 +20,11 @@ import json
 import bisect
 import logging
 import threading
+from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageOps, UnidentifiedImageError
 from fastapi import FastAPI, File, UploadFile, Form
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -41,6 +42,14 @@ log = logging.getLogger("pinyin-server")
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
 DICT_FILE = BASE_DIR / "cedict_ts.u8"
+
+# Upload/OCR safety limits. These are intentionally configurable for slower
+# machines or very high-resolution source material.
+MAX_UPLOAD_BYTES = int(os.environ.get("MAX_UPLOAD_BYTES", str(20 * 1024 * 1024)))
+MAX_IMAGE_PIXELS = int(os.environ.get("MAX_IMAGE_PIXELS", str(40_000_000)))
+MAX_OCR_DIMENSION = int(os.environ.get("MAX_OCR_DIMENSION", "2600"))
+UPLOAD_CHUNK_BYTES = 1024 * 1024
+
 
 # ---------------------------------------------------------------------------
 # OCR engine (lazy-loaded in a background thread so the server starts fast)
@@ -75,6 +84,11 @@ class Cedict:
         self._by_traditional = {}
         self._by_char = {}          # single char -> list of entries
         self._pinyin_sorted = []    # sorted list of (normalized_pinyin, entry) for prefix search
+        self._pinyin_keys = []
+        self._simp_sorted = []      # sorted (headword, entry) for fast hanzi prefix search
+        self._trad_sorted = []
+        self._simp_keys = []
+        self._trad_keys = []
         self._load()
 
     def _load(self):
@@ -101,21 +115,31 @@ class Cedict:
                     self._by_char.setdefault(ch, []).append(entry)
                 count += 1
         log.info("Loaded %d dictionary entries.", count)
-        self._build_pinyin_index()
+        self._build_search_indexes()
 
-    def _build_pinyin_index(self):
-        """Build a sorted index of normalized (tone-less, no-space) pinyin
-        so users can search by typing pinyin without knowing the character,
-        similar to Pleco's pinyin lookup.
-        """
-        pairs = []
+    def _build_search_indexes(self):
+        """Build sorted pinyin and headword indexes for fast prefix lookups."""
+        pinyin_pairs = []
+        simp_pairs = []
+        trad_pairs = []
         for entry in self._entries:
             norm = normalize_pinyin_query(entry["pinyin"])
             if norm:
-                pairs.append((norm, entry))
-        pairs.sort(key=lambda p: p[0])
-        self._pinyin_sorted = pairs
-        log.info("Built pinyin search index with %d entries.", len(pairs))
+                pinyin_pairs.append((norm, entry))
+            simp_pairs.append((entry["simplified"], entry))
+            trad_pairs.append((entry["traditional"], entry))
+
+        pinyin_pairs.sort(key=lambda p: p[0])
+        simp_pairs.sort(key=lambda p: p[0])
+        trad_pairs.sort(key=lambda p: p[0])
+
+        self._pinyin_sorted = pinyin_pairs
+        self._pinyin_keys = [p[0] for p in pinyin_pairs]
+        self._simp_sorted = simp_pairs
+        self._trad_sorted = trad_pairs
+        self._simp_keys = [p[0] for p in simp_pairs]
+        self._trad_keys = [p[0] for p in trad_pairs]
+        log.info("Built search indexes for %d entries.", len(self._entries))
 
     def search_by_pinyin(self, query: str, max_results: int = 30):
         """Find dictionary entries whose pinyin starts with `query`
@@ -129,9 +153,8 @@ class Cedict:
         norm_query = normalize_pinyin_query(query)
         if not norm_query or not self._pinyin_sorted:
             return []
-        keys = [p[0] for p in self._pinyin_sorted]
-        lo = bisect.bisect_left(keys, norm_query)
-        hi = bisect.bisect_left(keys, norm_query[:-1] + chr(ord(norm_query[-1]) + 1))
+        lo = bisect.bisect_left(self._pinyin_keys, norm_query)
+        hi = bisect.bisect_right(self._pinyin_keys, norm_query + "\uffff")
         candidates = [self._pinyin_sorted[i][1] for i in range(lo, hi)]
 
         # De-duplicate by (simplified, pinyin) signature.
@@ -151,6 +174,54 @@ class Cedict:
 
         unique.sort(key=rank_key)
         return unique[:max_results]
+
+    def _prefix_matches(self, query: str, pairs, keys, max_results: int):
+        if not query:
+            return []
+        lo = bisect.bisect_left(keys, query)
+        hi = bisect.bisect_right(keys, query + "\uffff")
+        return [pairs[i][1] for i in range(lo, min(hi, lo + max_results))]
+
+    def search_by_hanzi(self, query: str, max_results: int = 30):
+        """Exact, prefix, then substring search without full scans for prefixes."""
+        query = query.strip()
+        if not query:
+            return []
+        results = []
+        seen = set()
+
+        def add(entries):
+            for entry in entries:
+                sig = (entry["simplified"], entry["pinyin"])
+                if sig not in seen:
+                    seen.add(sig)
+                    results.append(entry)
+                    if len(results) >= max_results:
+                        return True
+            return False
+
+        if len(query) == 1:
+            # Put the character's own dictionary entry first, then words
+            # containing that character.
+            if add(self.lookup(query, max_results=max_results)):
+                return results[:max_results]
+            add(self.lookup_char(query, max_results=max_results))
+            return results[:max_results]
+
+        if add(self.lookup(query, max_results=max_results)):
+            return results[:max_results]
+        if add(self._prefix_matches(query, self._simp_sorted, self._simp_keys, max_results)):
+            return results[:max_results]
+        if add(self._prefix_matches(query, self._trad_sorted, self._trad_keys, max_results)):
+            return results[:max_results]
+
+        # Substring search is the fallback and only runs when exact/prefix
+        # results do not fill the requested result set.
+        for entry in self._entries:
+            if query in entry["simplified"] or query in entry["traditional"]:
+                if add([entry]):
+                    break
+        return results[:max_results]
 
     @staticmethod
     def _parse_line(line: str):
@@ -264,6 +335,7 @@ _GLOSS = {
 }
 
 
+@lru_cache(maxsize=8192)
 def translate_definition(def_text: str, lang: str) -> str:
     """Best-effort translation of an English definition to `lang`.
 
@@ -296,6 +368,7 @@ def translate_definition(def_text: str, lang: str) -> str:
     return online if online else def_text
 
 
+@lru_cache(maxsize=4096)
 def _online_translate(text: str, lang: str) -> str:
     """Translate `text` to `lang` using the free MyMemory API.
 
@@ -552,7 +625,7 @@ def split_into_words(text: str):
 # ---------------------------------------------------------------------------
 # FastAPI app
 # ---------------------------------------------------------------------------
-app = FastAPI(title="新华字典 Photo Pinyin", version="1.0.0")
+app = FastAPI(title="新华字典 Photo Pinyin", version="1.1.0")
 
 # Load dictionary at startup (fast, ~1s)
 _dict = Cedict(DICT_FILE)
@@ -576,6 +649,7 @@ def pinyin_search(q: str = "", lang: str = "en", limit: int = 30):
     """
     if not q or not _dict:
         return {"results": []}
+    limit = max(1, min(int(limit), 100))
     entries = _dict.search_by_pinyin(q, max_results=limit)
     results = []
     for e in entries:
@@ -604,34 +678,8 @@ def dict_lookup(q: str = "", lang: str = "en", limit: int = 30):
     if not q:
         return {"results": []}
 
-    results = []
-    seen = set()
-
-    def add(entries):
-        for e in entries:
-            sig = (e["simplified"], e["pinyin"])
-            if sig not in seen:
-                seen.add(sig)
-                results.append(e)
-
-    if len(q) == 1:
-        add(_dict.lookup_char(q, max_results=limit))
-    else:
-        # Exact match first
-        add(_dict.lookup(q, max_results=limit))
-        # Then prefix matches
-        for e in _dict._entries:
-            if e["simplified"].startswith(q) or e["traditional"].startswith(q):
-                add([e])
-            if len(results) >= limit:
-                break
-        # Then substring matches
-        if len(results) < limit:
-            for e in _dict._entries:
-                if q in e["simplified"] or q in e["traditional"]:
-                    add([e])
-                if len(results) >= limit:
-                    break
+    limit = max(1, min(int(limit), 100))
+    results = _dict.search_by_hanzi(q, max_results=limit)
 
     out = []
     for e in results[:limit]:
@@ -651,16 +699,56 @@ async def ocr_endpoint(
     lang: str = Form("en"),
 ):
     """Process an uploaded photo: OCR -> pinyin -> definitions -> contrast colors."""
-    data = await file.read()
+    if file.content_type and not file.content_type.startswith("image/"):
+        return JSONResponse(status_code=415, content={"error": "Please upload an image file."})
+
+    chunks = []
+    total = 0
+    while True:
+        chunk = await file.read(UPLOAD_CHUNK_BYTES)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > MAX_UPLOAD_BYTES:
+            return JSONResponse(
+                status_code=413,
+                content={"error": f"Image is too large. Maximum upload size is {MAX_UPLOAD_BYTES // (1024 * 1024)} MB."},
+            )
+        chunks.append(chunk)
+    data = b"".join(chunks)
+    if not data:
+        return JSONResponse(status_code=400, content={"error": "The uploaded image is empty."})
+
     try:
-        img = Image.open(io.BytesIO(data)).convert("RGB")
-    except Exception as exc:
+        with Image.open(io.BytesIO(data)) as probe:
+            width, height = probe.size
+            if width <= 0 or height <= 0:
+                raise ValueError("Image has invalid dimensions")
+            if width * height > MAX_IMAGE_PIXELS:
+                return JSONResponse(
+                    status_code=413,
+                    content={"error": f"Image dimensions are too large ({width}×{height}). Maximum is {MAX_IMAGE_PIXELS:,} pixels."},
+                )
+            img = ImageOps.exif_transpose(probe).convert("RGB")
+    except (UnidentifiedImageError, OSError, ValueError) as exc:
         return JSONResponse(status_code=400, content={"error": f"Invalid image: {exc}"})
+
+    # OCR does not need the full camera resolution. Downscale only for OCR
+    # and map returned boxes back to the original image coordinates.
+    ocr_img = img
+    scale_x = scale_y = 1.0
+    longest = max(img.size)
+    if MAX_OCR_DIMENSION > 0 and longest > MAX_OCR_DIMENSION:
+        factor = MAX_OCR_DIMENSION / longest
+        ocr_size = (max(1, round(img.width * factor)), max(1, round(img.height * factor)))
+        ocr_img = img.resize(ocr_size, Image.Resampling.LANCZOS)
+        scale_x = img.width / ocr_img.width
+        scale_y = img.height / ocr_img.height
 
     # Run OCR
     ocr = get_ocr()
     try:
-        result, _ = ocr(np.asarray(img))
+        result, _ = ocr(np.asarray(ocr_img))
     except Exception as exc:
         log.exception("OCR failed")
         return JSONResponse(status_code=500, content={"error": f"OCR failed: {exc}"})
@@ -670,6 +758,8 @@ async def ocr_endpoint(
 
     items = []
     for box, text, conf in result:
+        if scale_x != 1.0 or scale_y != 1.0:
+            box = [[float(x) * scale_x, float(y) * scale_y] for x, y in box]
         # Average background colour in the box for contrast
         bg = average_color_in_region(img, box)
         fg, ratio = best_contrast_color(bg)
@@ -701,7 +791,7 @@ async def ocr_endpoint(
             "words": word_data,
         })
 
-    return {"items": items}
+    return {"items": items, "image_width": img.width, "image_height": img.height}
 
 
 # Serve static files (JS/CSS)

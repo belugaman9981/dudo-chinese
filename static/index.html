@@ -42,11 +42,11 @@
 
         <div class="capture-actions">
           <button id="capture-btn" class="btn btn-capture" disabled>
-            <span class="btn-icon">📷</span>
+            <span class="btn-icon" aria-hidden="true">●</span>
             <span class="btn-label" data-i18n="captureBtn">拍照</span>
           </button>
           <label class="btn btn-upload" for="file-input">
-            <span class="btn-icon">🖼️</span>
+            <span class="btn-icon" aria-hidden="true">＋</span>
             <span class="btn-label" data-i18n="uploadBtn">上传图片</span>
           </label>
           <input type="file" id="file-input" accept="image/*" capture="environment" hidden />
@@ -101,7 +101,7 @@
           <div id="history-list" class="history-list"></div>
         </div>
         <div id="dict-empty-hint" class="empty-state">
-          <div class="empty-icon">📖</div>
+          <div class="empty-icon">字</div>
           <p data-i18n="dictHint">输入拼音或汉字，例如 "nihao" 或 "你好"。</p>
         </div>
       </div>
@@ -197,19 +197,19 @@
   <!-- Bottom tab bar (Pleco-style) -->
   <nav class="tabbar">
     <button class="tab-btn active" data-tab="camera">
-      <span class="tab-icon">📷</span>
+      <span class="tab-icon" aria-hidden="true">◉</span>
       <span class="tab-label" data-i18n="tabCamera">相机</span>
     </button>
     <button class="tab-btn" data-tab="dict" id="dict-tab-btn">
-      <span class="tab-icon">📖</span>
+      <span class="tab-icon" aria-hidden="true">字</span>
       <span class="tab-label" data-i18n="tabDict">词典</span>
     </button>
     <button class="tab-btn" data-tab="results" id="results-tab-btn">
-      <span class="tab-icon">📄</span>
+      <span class="tab-icon" aria-hidden="true">▤</span>
       <span class="tab-label" data-i18n="tabResults">结果</span>
     </button>
     <button class="tab-btn" data-tab="settings">
-      <span class="tab-icon">⚙️</span>
+      <span class="tab-icon" aria-hidden="true">⚙</span>
       <span class="tab-label" data-i18n="tabSettings">设置</span>
     </button>
   </nav>

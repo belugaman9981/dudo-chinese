@@ -166,6 +166,7 @@
 
   const savedWords = loadSaved();
   let searchHistory = loadHistory();
+  const MAX_CLIENT_UPLOAD_BYTES = 20 * 1024 * 1024;
 
   // ---------- State ----------
   let stream = null;
@@ -210,6 +211,7 @@
       recognizingText: "Recognizing text (OCR)…",
       serverError: "Server error",
       noCharsDetected: "No Chinese characters detected.",
+      imageTooLarge: "That image is too large. Please choose an image under 20 MB.",
       processingFailed: "Processing failed: {msg}",
       noTextHere: "No text there — tap a highlighted text block.",
       noWordsDetected: "No words detected.",
@@ -256,6 +258,7 @@
       recognizingText: "正在识别文字 (OCR)…",
       serverError: "服务器错误",
       noCharsDetected: "未检测到中文字符。",
+      imageTooLarge: "图片太大。请选择小于 20 MB 的图片。",
       processingFailed: "处理失败：{msg}",
       noTextHere: "此处没有文字 — 请点击高亮的文字区域。",
       noWordsDetected: "未检测到词汇。",
@@ -924,6 +927,16 @@
   fileInput.addEventListener("change", (e) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast(t("processingFailed", { msg: "Please choose an image file." }));
+      fileInput.value = "";
+      return;
+    }
+    if (file.size > MAX_CLIENT_UPLOAD_BYTES) {
+      toast(t("imageTooLarge"));
+      fileInput.value = "";
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => processImage(reader.result);
     reader.readAsDataURL(file);

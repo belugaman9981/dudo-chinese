@@ -55,8 +55,9 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-The first time you run the server, RapidOCR will download its ONNX models
-(about 15 MB) automatically.
+RapidOCR needs its OCR model files. Depending on the installed RapidOCR
+version, required model resources may be downloaded or initialized on first use.
+The first OCR request can therefore take longer than later requests.
 
 ## Run the server
 
@@ -110,13 +111,21 @@ certificate warning once, and the camera will be allowed.
 |----------------------|---------|---------|
 | `HOST`               | `0.0.0.0` | Interface to bind |
 | `PORT`               | `8000`   | Port to listen on |
+| `MAX_UPLOAD_BYTES`   | `20971520` | Maximum uploaded image size (20 MB) |
+| `MAX_IMAGE_PIXELS`   | `40000000` | Maximum decoded image area |
+| `MAX_OCR_DIMENSION`  | `2600` | Longest side used for OCR; boxes are scaled back to the original photo |
 
 ## Languages
 
 Definitions are provided in English by default (from CC-CEDICT). The app
-includes a built-in glossary that translates common definition words into
-Chinese, Spanish, French, German, Japanese, Korean, Russian, Portuguese, and
-Italian. Select the language from the dropdown in the header.
+includes a small built-in glossary for common definition words. When a complete
+non-English definition cannot be produced from that offline glossary, the server
+may send the English definition text to the public MyMemory translation service.
+The app caches translation results in memory during the current server session to
+reduce repeat network calls. OCR images themselves are not sent to MyMemory.
+
+If the computer is offline or the translation request fails, the original English
+definition is shown instead.
 
 ## Project layout
 
@@ -127,7 +136,7 @@ static/
   index.html       # Single-page frontend
   style.css        # iPad-friendly styling
   app.js           # Camera, upload, annotation rendering
-requirements.txt   # Python dependencies
+requirements.txt   # Python dependency ranges
 ```
 
 ## License
@@ -135,3 +144,15 @@ requirements.txt   # Python dependencies
 - App code: see [LICENSE](./LICENSE).
 - Dictionary data (CC-CEDICT) is licensed under
   [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
+
+## Image safety and performance
+
+The server rejects non-image uploads, empty uploads, files larger than the configured
+limit, and images with excessive decoded dimensions. Large but valid photos are
+downscaled before OCR for better speed and memory use; OCR bounding boxes are mapped
+back to the original-resolution image so highlights remain aligned in the browser.
+EXIF orientation is also applied automatically.
+
+Dictionary pinyin and Hanzi-prefix searches use prebuilt sorted indexes. Online
+translation results are cached in memory to avoid repeatedly translating identical
+definitions during a session.

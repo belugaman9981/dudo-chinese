@@ -29,3 +29,15 @@ env/
 
 # Test images
 test_*.png
+
+# Editor / OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local runtime logs
+*.log
+
+# Distribution archives
+*.zip
