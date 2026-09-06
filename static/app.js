@@ -453,6 +453,17 @@
       stream = await navigator.mediaDevices.getUserMedia(constraints);
       video.srcObject = stream;
       await video.play();
+
+      // Match the preview box to the camera's real aspect ratio instead of
+      // cropping the feed into a fixed rectangle. Clamp extreme ratios so
+      // portrait cameras still fit comfortably on smaller screens.
+      if (video.videoWidth && video.videoHeight) {
+        const ratio = video.videoWidth / video.videoHeight;
+        const safeRatio = Math.min(Math.max(ratio, 0.72), 1.9);
+        const cameraWrap = video.closest(".camera-wrap");
+        if (cameraWrap) cameraWrap.style.setProperty("--camera-ratio", String(safeRatio));
+      }
+
       captureBtn.disabled = false;
       cameraStatus.textContent = t("cameraReady");
       cameraStatus.classList.remove("error");

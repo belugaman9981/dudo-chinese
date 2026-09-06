@@ -137,13 +137,14 @@ label.btn:focus-visible {
 .camera-wrap {
   position: relative;
   width: 100%;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: var(--camera-ratio, 4 / 3);
+  max-height: min(62dvh, 620px);
   overflow: hidden;
   background: #101417;
   border-radius: 18px;
   box-shadow: 0 10px 28px rgba(15,23,42,.16);
 }
-.camera-wrap video { width: 100%; height: 100%; display: block; object-fit: cover; }
+.camera-wrap video { width: 100%; height: 100%; display: block; object-fit: contain; background: #101417; }
 .camera-overlay { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
 .frame-guide {
   width: 82%; height: 62%;
@@ -342,7 +343,7 @@ label.btn:focus-visible {
   .content { padding-top: 24px; }
   .camera-panel { left: 50%; right: auto; width: min(760px, calc(100vw - 32px)); transform: translate(-50%, 105%); border-radius: 24px 24px 0 0; }
   .camera-panel.active { transform: translate(-50%, 0); }
-  .camera-wrap { aspect-ratio: 16 / 10; max-height: 58dvh; }
+  .camera-wrap { max-height: 58dvh; }
   .result-container { max-height: 70dvh; }
 }
 
