@@ -13,7 +13,7 @@ Run with:
 Then open http://localhost:8000 (or http://<your-ip>:8000 on your iPad).
 """
 
-import io 
+import io
 import os
 import re
 import json
