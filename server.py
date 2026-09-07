@@ -1,4 +1,4 @@
-"""
+""" 
 新华字典 Photo Pinyin Server
 ============================
 FastAPI backend that:
